@@ -101,7 +101,7 @@ function sortHeader(label: string) {
 }
 
 const columns: TableColumn<Resource>[] = [
-  { accessorKey: 'title', header: sortHeader('Title') },
+  { accessorKey: 'title', header: sortHeader('Title'), maxSize: 300 },
   { id: 'ext', accessorFn: row => getExtension(row.url), header: sortHeader('Extension') },
   { id: 'tags', header: 'Tags' },
   { accessorKey: 'created_at', header: sortHeader('Created At') },
@@ -232,6 +232,10 @@ async function submitUpload() {
     </div>
 
     <UTable v-model:sorting="sorting" :data="resources" :columns="columns" :sorting-options="{ manualSorting: true }">
+      <template #title-cell="{ row }">
+        <span class="block max-w-xs truncate" :title="row.original.title ?? ''">{{ row.original.title }}</span>
+      </template>
+
       <template #ext-cell="{ row }">
         <UBadge :label="getExtension(row.original.url)" variant="subtle" size="sm" />
       </template>
