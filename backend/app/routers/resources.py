@@ -156,6 +156,17 @@ async def list_resource_ids(
     return list(result.scalars().all())
 
 
+@router.get("/resources/folders")
+async def list_resource_folders(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(Resource.folder, func.count(Resource.id))
+        .where(Resource.folder.isnot(None))
+        .group_by(Resource.folder)
+        .order_by(Resource.folder)
+    )
+    return [{"folder": f, "count": c} for f, c in result.all()]
+
+
 @router.post("/resources/batch-delete", response_model=BatchDeleteResponse)
 async def batch_delete_resources(
     body: BatchDeleteRequest, db: AsyncSession = Depends(get_db)

@@ -21,6 +21,11 @@ const items = [
     to: '/resources/viewer'
   },
   {
+    label: 'Folders',
+    icon: 'i-lucide-folders',
+    to: '/folders'
+  },
+  {
     label: 'Tags',
     icon: 'i-lucide-tag',
     to: '/tags'

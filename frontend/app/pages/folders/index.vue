@@ -1,0 +1,45 @@
+<script setup lang="ts">
+definePageMeta({
+  layout: 'dashboard'
+})
+
+interface FolderInfo {
+  folder: string
+  count: number
+}
+
+const { public: { apiBase } } = useRuntimeConfig()
+
+const { data: folders } = await useFetch<FolderInfo[]>(`${apiBase}/resources/folders`)
+</script>
+
+<template>
+  <div class="flex flex-col gap-6">
+    <UBreadcrumb
+      :items="[
+        { label: 'Folders' }
+      ]"
+    />
+
+    <div v-if="!folders || folders.length === 0" class="text-center text-gray-500 py-12">
+      No folders found.
+    </div>
+
+    <div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <UCard
+        v-for="item in folders"
+        :key="item.folder"
+        class="cursor-pointer hover:ring-2 hover:ring-primary-500 transition"
+        @click="navigateTo(`/folders/viewer?folder=${encodeURIComponent(item.folder)}`)"
+      >
+        <div class="flex items-center gap-3">
+          <UIcon name="i-lucide-folder" class="size-8 text-primary-500 shrink-0" />
+          <div class="min-w-0">
+            <p class="font-medium truncate">{{ item.folder }}</p>
+            <p class="text-sm text-gray-500">{{ item.count }} resource{{ item.count === 1 ? '' : 's' }}</p>
+          </div>
+        </div>
+      </UCard>
+    </div>
+  </div>
+</template>
