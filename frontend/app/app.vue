@@ -1,6 +1,7 @@
 <template>
-  <div>
-    <NuxtRouteAnnouncer />
-    <NuxtWelcome />
-  </div>
+  <UApp>  
+    <div class="min-h-screen bg-gray-100 flex items-center justify-center">
+      <TestCard />
+    </div>
+  </UApp>
 </template>
