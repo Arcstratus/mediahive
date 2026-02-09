@@ -34,6 +34,7 @@ class Resource(Base):
     type: Mapped[str] = mapped_column(String, nullable=False)
     url: Mapped[str | None] = mapped_column(String, nullable=True)
     title: Mapped[str | None] = mapped_column(String, nullable=True)
+    folder: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )

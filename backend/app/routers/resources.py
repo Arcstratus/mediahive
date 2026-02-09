@@ -163,10 +163,29 @@ async def update_resource(
         raise HTTPException(status_code=404, detail="Resource not found")
     update_data = body.model_dump(exclude_unset=True)
     tags_data = update_data.pop("tags", None)
+    folder_data = update_data.pop("folder", ...)
+
     for key, value in update_data.items():
         setattr(resource, key, value)
     if tags_data is not None:
         resource.tags = await _resolve_tags(db, tags_data)
+
+    if folder_data is not ...:
+        new_folder = folder_data.strip() if folder_data else None
+        if new_folder == "":
+            new_folder = None
+        if new_folder and ".." in new_folder:
+            raise HTTPException(status_code=400, detail="Invalid folder path")
+        old_folder = resource.folder
+        if new_folder != old_folder:
+            if resource.url and resource.type in ("image", "video"):
+                old_path = MEDIA_DIR / (old_folder or "") / resource.url
+                new_path = MEDIA_DIR / (new_folder or "") / resource.url
+                if old_path.is_file():
+                    new_path.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.move(str(old_path), str(new_path))
+            resource.folder = new_folder
+
     await db.commit()
     await db.refresh(resource)
     return resource
@@ -178,7 +197,7 @@ async def delete_resource(resource_id: int, db: AsyncSession = Depends(get_db)):
     if not resource:
         raise HTTPException(status_code=404, detail="Resource not found")
     if resource.url and resource.type in ("image", "video"):
-        src = MEDIA_DIR / resource.url
+        src = MEDIA_DIR / (resource.folder or "") / resource.url
         if src.is_file():
             TRASH_DIR.mkdir(parents=True, exist_ok=True)
             shutil.move(str(src), str(TRASH_DIR / resource.url))

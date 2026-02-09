@@ -14,6 +14,7 @@ interface Resource {
   type: string
   url: string | null
   title: string | null
+  folder: string | null
   tags: Tag[]
   created_at: string
 }
@@ -25,7 +26,7 @@ const router = useRouter()
 const ids = ref<number[]>([])
 const currentId = ref<number | null>(null)
 const resource = ref<Resource | null>(null)
-const form = reactive({ title: '', tags: [] as string[] })
+const form = reactive({ title: '', folder: '', tags: [] as string[] })
 const saving = ref(false)
 
 const currentIndex = computed(() => {
@@ -55,12 +56,13 @@ async function fetchResource(id: number) {
     resource.value = data
   }
   form.title = resource.value.title ?? ''
+  form.folder = resource.value.folder ?? ''
   form.tags = resource.value.tags.map(t => t.name)
 }
 
-function preloadImage(url: string | null) {
-  if (!url) return
-  const fullUrl = `${apiBase}/media/${url}`
+function preloadImage(res: Resource) {
+  if (!res.url) return
+  const fullUrl = `${apiBase}/media/${res.folder ? res.folder + '/' : ''}${res.url}`
   if (imageCache.has(fullUrl)) return
   const img = new Image()
   img.src = fullUrl
@@ -75,7 +77,7 @@ async function preloadResource(id: number) {
     }
     catch { return }
   }
-  preloadImage(resourceCache.get(id)!.url)
+  preloadImage(resourceCache.get(id)!)
 }
 
 function preloadAdjacent() {
@@ -130,7 +132,7 @@ async function saveForm() {
   try {
     const updated = await $fetch<Resource>(`${apiBase}/resources/${currentId.value}`, {
       method: 'PUT',
-      body: { title: form.title, tags: form.tags }
+      body: { title: form.title, folder: form.folder || null, tags: form.tags }
     })
     resource.value = updated
     resourceCache.set(currentId.value, updated)
@@ -159,7 +161,7 @@ async function saveForm() {
       <div class="flex flex-col gap-4">
         <div class="flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg min-h-[400px]">
           <img
-            :src="apiBase + '/media/' + resource.url"
+            :src="apiBase + '/media/' + (resource.folder ? resource.folder + '/' : '') + resource.url"
             :alt="resource.title ?? ''"
             class="max-h-[70vh] max-w-full object-contain"
           >
@@ -178,6 +180,9 @@ async function saveForm() {
         </h2>
         <UFormField label="Title" name="title">
           <UInput v-model="form.title" placeholder="Image title" class="w-full" />
+        </UFormField>
+        <UFormField label="Folder" name="folder">
+          <UInput v-model="form.folder" placeholder="e.g. 2024/vacation" class="w-full" />
         </UFormField>
         <UFormField label="Tags" name="tags">
           <UInputTags v-model="form.tags" placeholder="Add tags..." :add-on-blur="true" class="w-full" />

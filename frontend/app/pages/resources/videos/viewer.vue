@@ -14,6 +14,7 @@ interface Resource {
   type: string
   url: string | null
   title: string | null
+  folder: string | null
   tags: Tag[]
   created_at: string
 }
@@ -25,7 +26,7 @@ const router = useRouter()
 const ids = ref<number[]>([])
 const currentId = ref<number | null>(null)
 const resource = ref<Resource | null>(null)
-const form = reactive({ title: '', tags: [] as string[] })
+const form = reactive({ title: '', folder: '', tags: [] as string[] })
 const saving = ref(false)
 
 const currentIndex = computed(() => {
@@ -55,12 +56,13 @@ async function fetchResource(id: number) {
     resource.value = data
   }
   form.title = resource.value.title ?? ''
+  form.folder = resource.value.folder ?? ''
   form.tags = resource.value.tags.map(t => t.name)
 }
 
-function preloadVideo(url: string | null) {
-  if (!url) return
-  const fullUrl = `${apiBase}/media/${url}`
+function preloadVideo(res: Resource) {
+  if (!res.url) return
+  const fullUrl = `${apiBase}/media/${res.folder ? res.folder + '/' : ''}${res.url}`
   if (preloadedVideos.has(fullUrl)) return
   preloadedVideos.add(fullUrl)
   fetch(fullUrl).catch(() => {})
@@ -74,7 +76,7 @@ async function preloadResource(id: number) {
     }
     catch { return }
   }
-  preloadVideo(resourceCache.get(id)!.url)
+  preloadVideo(resourceCache.get(id)!)
 }
 
 function preloadAdjacent() {
@@ -129,7 +131,7 @@ async function saveForm() {
   try {
     const updated = await $fetch<Resource>(`${apiBase}/resources/${currentId.value}`, {
       method: 'PUT',
-      body: { title: form.title, tags: form.tags }
+      body: { title: form.title, folder: form.folder || null, tags: form.tags }
     })
     resource.value = updated
     resourceCache.set(currentId.value, updated)
@@ -160,7 +162,7 @@ async function saveForm() {
           <video
             :key="resource.id"
             controls
-            :src="apiBase + '/media/' + resource.url"
+            :src="apiBase + '/media/' + (resource.folder ? resource.folder + '/' : '') + resource.url"
             class="max-h-[70vh] max-w-full"
           />
         </div>
@@ -178,6 +180,9 @@ async function saveForm() {
         </h2>
         <UFormField label="Title" name="title">
           <UInput v-model="form.title" placeholder="Video title" class="w-full" />
+        </UFormField>
+        <UFormField label="Folder" name="folder">
+          <UInput v-model="form.folder" placeholder="e.g. 2024/vacation" class="w-full" />
         </UFormField>
         <UFormField label="Tags" name="tags">
           <UInputTags v-model="form.tags" placeholder="Add tags..." :add-on-blur="true" class="w-full" />

@@ -16,6 +16,7 @@ interface Resource {
   type: string
   url: string | null
   title: string | null
+  folder: string | null
   tags: Tag[]
   created_at: string
 }
@@ -110,11 +111,12 @@ const columns: TableColumn<Resource>[] = [
 // Edit modal
 const modalOpen = ref(false)
 const editingResource = ref<Resource | null>(null)
-const form = reactive({ title: '', tags: [] as string[] })
+const form = reactive({ title: '', folder: '', tags: [] as string[] })
 
 function openEdit(resource: Resource) {
   editingResource.value = resource
   form.title = resource.title ?? ''
+  form.folder = resource.folder ?? ''
   form.tags = resource.tags.map(t => t.name)
   modalOpen.value = true
 }
@@ -123,7 +125,7 @@ async function submitForm() {
   if (!editingResource.value) return
   await $fetch(`${apiBase}/resources/${editingResource.value.id}`, {
     method: 'PUT',
-    body: { title: form.title, tags: form.tags }
+    body: { title: form.title, folder: form.folder || null, tags: form.tags }
   })
   modalOpen.value = false
   await refresh()
@@ -290,6 +292,9 @@ async function submitUpload() {
         <div class="flex flex-col gap-4">
           <UFormField label="Title" name="title">
             <UInput v-model="form.title" placeholder="Image title" class="w-full" />
+          </UFormField>
+          <UFormField label="Folder" name="folder">
+            <UInput v-model="form.folder" placeholder="e.g. 2024/vacation" class="w-full" />
           </UFormField>
           <UFormField label="Tags" name="tags">
             <UInputTags v-model="form.tags" placeholder="Add tags..." :add-on-blur="true" class="w-full" />

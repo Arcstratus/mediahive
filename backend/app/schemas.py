@@ -33,6 +33,7 @@ class ResourceCreate(BaseModel):
 class ResourceUpdate(BaseModel):
     url: str | None = None
     title: str | None = None
+    folder: str | None = None
     tags: list[str] | None = None
 
 
@@ -41,6 +42,7 @@ class ResourceResponse(BaseModel):
     type: ResourceType
     url: str | None
     title: str | None
+    folder: str | None = None
     created_at: datetime
     tags: list[TagResponse] = []
 
