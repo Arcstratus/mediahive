@@ -35,6 +35,9 @@ const currentIndex = computed(() => {
 
 const totalCount = computed(() => ids.value.length)
 
+const resourceCache = new Map<number, Resource>()
+const imageCache = new Map<string, HTMLImageElement>()
+
 async function fetchIds() {
   ids.value = await $fetch<number[]>(`${apiBase}/resources/ids`, {
     query: { type: 'image' }
@@ -42,15 +45,53 @@ async function fetchIds() {
 }
 
 async function fetchResource(id: number) {
-  resource.value = await $fetch<Resource>(`${apiBase}/resources/${id}`)
+  const cached = resourceCache.get(id)
+  if (cached) {
+    resource.value = cached
+  }
+  else {
+    const data = await $fetch<Resource>(`${apiBase}/resources/${id}`)
+    resourceCache.set(id, data)
+    resource.value = data
+  }
   form.title = resource.value.title ?? ''
   form.tags = resource.value.tags.map(t => t.name)
+}
+
+function preloadImage(url: string | null) {
+  if (!url) return
+  const fullUrl = `${apiBase}/media/${url}`
+  if (imageCache.has(fullUrl)) return
+  const img = new Image()
+  img.src = fullUrl
+  imageCache.set(fullUrl, img)
+}
+
+async function preloadResource(id: number) {
+  if (!resourceCache.has(id)) {
+    try {
+      const data = await $fetch<Resource>(`${apiBase}/resources/${id}`)
+      resourceCache.set(id, data)
+    }
+    catch { return }
+  }
+  preloadImage(resourceCache.get(id)!.url)
+}
+
+function preloadAdjacent() {
+  const idx = currentIndex.value
+  for (const offset of [-2, -1, 1, 2]) {
+    const adjIdx = idx + offset
+    if (adjIdx >= 0 && adjIdx < ids.value.length) {
+      preloadResource(ids.value[adjIdx])
+    }
+  }
 }
 
 function navigateTo(id: number) {
   currentId.value = id
   router.replace({ query: { id: String(id) } })
-  fetchResource(id)
+  fetchResource(id).then(() => preloadAdjacent())
 }
 
 function prev() {
@@ -92,6 +133,7 @@ async function saveForm() {
       body: { title: form.title, tags: form.tags }
     })
     resource.value = updated
+    resourceCache.set(currentId.value, updated)
   }
   finally {
     saving.value = false
