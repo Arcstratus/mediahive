@@ -1,0 +1,9 @@
+[
+  {"type": "url", "url": "https://example.com", "title": "Example"},
+  {"type": "url", "url": "https://github.com", "title": "GitHub"},
+  {"type": "url", "url": "https://docs.python.org/3/", "title": "Python Docs"},
+  {"type": "url", "url": "https://fastapi.tiangolo.com", "title": "FastAPI"},
+  {"type": "url", "url": "https://ui.nuxt.com", "title": "Nuxt UI"},
+  {"type": "url", "url": "https://sqlalchemy.org", "title": "SQLAlchemy"},
+  {"type": "url", "url": "https://developer.mozilla.org", "title": "MDN Web Docs"}
+]
