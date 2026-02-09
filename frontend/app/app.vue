@@ -1,7 +1,7 @@
 <template>
-  <UApp>  
-    <div class="min-h-screen bg-gray-100 flex items-center justify-center">
-      <TestCard />
-    </div>
+  <UApp>
+    <NuxtLayout>
+      <NuxtPage />
+    </NuxtLayout>
   </UApp>
 </template>
