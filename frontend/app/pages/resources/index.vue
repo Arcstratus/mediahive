@@ -13,8 +13,8 @@ interface Tag {
 
 interface Resource {
   id: number
-  type: string
-  url: string | null
+  category: string
+  filename: string | null
   title: string | null
   folder: string | null
   tags: Tag[]
@@ -81,10 +81,10 @@ watch([filterSearch, filterTags, filterExt], () => {
   page.value = 1
 })
 
-function getExtension(url: string | null): string {
-  if (!url) return ''
-  const dot = url.lastIndexOf('.')
-  return dot >= 0 ? url.slice(dot) : ''
+function getExtension(filename: string | null): string {
+  if (!filename) return ''
+  const dot = filename.lastIndexOf('.')
+  return dot >= 0 ? filename.slice(dot) : ''
 }
 
 function sortHeader(label: string) {
@@ -135,8 +135,8 @@ const columns: TableColumn<Resource>[] = [
     })
   },
   { accessorKey: 'title', header: sortHeader('Title'), maxSize: 300 },
-  { id: 'type', accessorKey: 'type', header: 'Type' },
-  { id: 'ext', accessorFn: row => getExtension(row.url), header: sortHeader('Extension') },
+  { id: 'category', accessorKey: 'category', header: 'Category' },
+  { id: 'ext', accessorFn: row => getExtension(row.filename), header: sortHeader('Extension') },
   { id: 'folder', header: 'Folder' },
   { id: 'tags', header: 'Tags' },
   { accessorKey: 'created_at', header: sortHeader('Created At') },
@@ -181,8 +181,8 @@ function buildTree(items: Resource[]): TreeItem[] {
     }
     for (const res of node.resources) {
       result.push({
-        label: res.title || res.url || 'Untitled',
-        icon: res.type === 'image' ? 'i-lucide-image' : 'i-lucide-video',
+        label: res.title || res.filename || 'Untitled',
+        icon: res.category === 'image' ? 'i-lucide-image' : 'i-lucide-video',
         slot: 'resource-item',
         value: res,
       } as TreeItem)
@@ -403,12 +403,12 @@ async function onImported() {
           <span class="block max-w-xs truncate" :title="row.original.title ?? ''">{{ row.original.title }}</span>
         </template>
 
-        <template #type-cell="{ row }">
-          <UBadge :label="row.original.type" :color="row.original.type === 'image' ? 'info' : 'warning'" variant="subtle" size="sm" />
+        <template #category-cell="{ row }">
+          <UBadge :label="row.original.category" :color="row.original.category === 'image' ? 'info' : 'warning'" variant="subtle" size="sm" />
         </template>
 
         <template #ext-cell="{ row }">
-          <UBadge :label="getExtension(row.original.url)" variant="subtle" size="sm" />
+          <UBadge :label="getExtension(row.original.filename)" variant="subtle" size="sm" />
         </template>
 
         <template #folder-cell="{ row }">
@@ -479,11 +479,11 @@ async function onImported() {
           <template #resource-item="{ item }">
             <div class="flex items-center gap-2 group w-full">
               <UIcon
-                :name="item.value?.type === 'image' ? 'i-lucide-image' : 'i-lucide-video'"
+                :name="item.value?.category === 'image' ? 'i-lucide-image' : 'i-lucide-video'"
                 class="size-4 text-primary shrink-0"
               />
               <span class="truncate">{{ item.label }}</span>
-              <UBadge :label="item.value?.type" :color="item.value?.type === 'image' ? 'info' : 'warning'" variant="subtle" size="xs" class="ml-1" />
+              <UBadge :label="item.value?.category" :color="item.value?.category === 'image' ? 'info' : 'warning'" variant="subtle" size="xs" class="ml-1" />
               <div v-if="item.value?.tags?.length" class="flex gap-1 ml-2">
                 <UBadge
                   v-for="tag in item.value.tags"

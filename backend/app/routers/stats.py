@@ -12,7 +12,7 @@ router = APIRouter(tags=["Stats"])
 @router.get("/stats", response_model=StatsResponse)
 async def get_stats(db: AsyncSession = Depends(get_db)):
     type_counts = await db.execute(
-        select(Resource.type, func.count()).group_by(Resource.type)
+        select(Resource.category, func.count()).group_by(Resource.category)
     )
     counts = {row[0]: row[1] for row in type_counts.all()}
 

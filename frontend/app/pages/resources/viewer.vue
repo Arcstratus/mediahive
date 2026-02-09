@@ -11,8 +11,8 @@ interface Tag {
 
 interface Resource {
   id: number
-  type: string
-  url: string | null
+  category: string
+  filename: string | null
   title: string | null
   folder: string | null
   tags: Tag[]
@@ -60,14 +60,14 @@ async function fetchResource(id: number) {
 }
 
 function getMediaUrl(res: Resource): string {
-  if (!res.url) return ''
-  return `${apiBase}/media/${res.folder ? res.folder + '/' : ''}${res.url}`
+  if (!res.filename) return ''
+  return `${apiBase}/media/${res.folder ? res.folder + '/' : ''}${res.filename}`
 }
 
 function preloadMedia(res: Resource) {
-  if (!res.url) return
+  if (!res.filename) return
   const fullUrl = getMediaUrl(res)
-  if (res.type === 'image') {
+  if (res.category === 'image') {
     if (imageCache.has(fullUrl)) return
     const img = new Image()
     img.src = fullUrl
@@ -186,7 +186,7 @@ async function saveForm() {
       <div class="flex flex-col gap-4">
         <div class="flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg min-h-[400px]">
           <img
-            v-if="resource.type === 'image'"
+            v-if="resource.category === 'image'"
             :src="getMediaUrl(resource)"
             :alt="resource.title ?? ''"
             class="max-h-[70vh] max-w-full object-contain"
@@ -211,7 +211,7 @@ async function saveForm() {
         <h2 class="text-lg font-semibold truncate">
           {{ resource.title || 'Untitled' }}
         </h2>
-        <UBadge :label="resource.type" :color="resource.type === 'image' ? 'info' : 'warning'" variant="subtle" size="sm" class="w-fit" />
+        <UBadge :label="resource.category" :color="resource.category === 'image' ? 'info' : 'warning'" variant="subtle" size="sm" class="w-fit" />
         <UFormField label="Title" name="title">
           <UInput v-model="form.title" placeholder="Title" class="w-full" />
         </UFormField>

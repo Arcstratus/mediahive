@@ -24,9 +24,15 @@ async def get_db() -> AsyncGenerator[AsyncSession]:
 async def lifespan(app):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        try:
-            await conn.execute(text("ALTER TABLE resources ADD COLUMN folder VARCHAR"))
-        except Exception:
-            pass
+        for stmt in [
+            "ALTER TABLE resources ADD COLUMN folder VARCHAR",
+            "ALTER TABLE resources RENAME COLUMN type TO category",
+            "ALTER TABLE resources RENAME COLUMN url TO filename",
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_resources_filename ON resources(filename)",
+        ]:
+            try:
+                await conn.execute(text(stmt))
+            except Exception:
+                pass
     yield
     await engine.dispose()

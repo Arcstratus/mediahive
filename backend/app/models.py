@@ -41,8 +41,8 @@ class Resource(Base):
     __tablename__ = "resources"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    type: Mapped[str] = mapped_column(String, nullable=False)
-    url: Mapped[str | None] = mapped_column(String, nullable=True)
+    category: Mapped[str] = mapped_column(String, nullable=False)
+    filename: Mapped[str | None] = mapped_column(String, nullable=True, unique=True)
     title: Mapped[str | None] = mapped_column(String, nullable=True)
     folder: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -58,7 +58,7 @@ class Bookmark(Base):
     __tablename__ = "bookmarks"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    title: Mapped[str] = mapped_column(String, nullable=False)
+    title: Mapped[str | None] = mapped_column(String, nullable=True)
     url: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str | None] = mapped_column(String, nullable=True)
     folder: Mapped[str | None] = mapped_column(String, nullable=True)

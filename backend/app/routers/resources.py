@@ -47,7 +47,9 @@ async def _resolve_tags(db: AsyncSession, tag_names: list[str]) -> list[Tag]:
 
 @router.post("/resources", response_model=ResourceResponse, status_code=201)
 async def create_resource(body: ResourceCreate, db: AsyncSession = Depends(get_db)):
-    resource = Resource(type=body.type.value, url=body.url, title=body.title)
+    resource = Resource(
+        category=body.category.value, filename=body.filename, title=body.title
+    )
     if body.tags:
         resource.tags = await _resolve_tags(db, body.tags)
     db.add(resource)
@@ -57,12 +59,12 @@ async def create_resource(body: ResourceCreate, db: AsyncSession = Depends(get_d
 
 
 _ext_expr = type_coerce(
-    func.substr(Resource.url, func.instr(Resource.url, ".")), String
+    func.substr(Resource.filename, func.instr(Resource.filename, ".")), String
 )
 
 SORTABLE_COLUMNS = {
     "title": Resource.title,
-    "url": Resource.url,
+    "filename": Resource.filename,
     "ext": _ext_expr,
     "created_at": Resource.created_at,
 }
@@ -72,7 +74,7 @@ SORTABLE_COLUMNS = {
 async def list_resources(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
-    type: str | None = Query(None),
+    category: str | None = Query(None),
     search: str | None = Query(None),
     ext: list[str] = Query(None),
     tag: list[str] = Query(None),
@@ -90,20 +92,20 @@ async def list_resources(
         base_query = base_query.where(Resource.folder == folder)
         count_query = count_query.where(Resource.folder == folder)
 
-    if type:
-        base_query = base_query.where(Resource.type == type)
-        count_query = count_query.where(Resource.type == type)
+    if category:
+        base_query = base_query.where(Resource.category == category)
+        count_query = count_query.where(Resource.category == category)
 
     if search:
         condition = or_(
             Resource.title.icontains(search),
-            Resource.url.icontains(search),
+            Resource.filename.icontains(search),
         )
         base_query = base_query.where(condition)
         count_query = count_query.where(condition)
 
     if ext:
-        ext_cond = or_(*[Resource.url.endswith(e) for e in ext])
+        ext_cond = or_(*[Resource.filename.endswith(e) for e in ext])
         base_query = base_query.where(ext_cond)
         count_query = count_query.where(ext_cond)
 
@@ -128,7 +130,7 @@ async def list_resources(
 
 @router.get("/resources/ids", response_model=list[int])
 async def list_resource_ids(
-    type: str | None = Query(None),
+    category: str | None = Query(None),
     search: str | None = Query(None),
     ext: list[str] = Query(None),
     tag: list[str] = Query(None),
@@ -141,14 +143,14 @@ async def list_resource_ids(
 
     if folder:
         query = query.where(Resource.folder == folder)
-    if type:
-        query = query.where(Resource.type == type)
+    if category:
+        query = query.where(Resource.category == category)
     if search:
         query = query.where(
-            or_(Resource.title.icontains(search), Resource.url.icontains(search))
+            or_(Resource.title.icontains(search), Resource.filename.icontains(search))
         )
     if ext:
-        query = query.where(or_(*[Resource.url.endswith(e) for e in ext]))
+        query = query.where(or_(*[Resource.filename.endswith(e) for e in ext]))
     if tag:
         for t in tag:
             tag_subq = (
@@ -185,11 +187,11 @@ async def batch_delete_resources(
         resource = await db.get(Resource, resource_id)
         if not resource:
             continue
-        if resource.url and resource.type in ("image", "video"):
-            src = MEDIA_DIR / (resource.folder or "") / resource.url
+        if resource.filename:
+            src = MEDIA_DIR / (resource.folder or "") / resource.filename
             if src.is_file():
                 TRASH_DIR.mkdir(parents=True, exist_ok=True)
-                shutil.move(str(src), str(TRASH_DIR / resource.url))
+                shutil.move(str(src), str(TRASH_DIR / resource.filename))
         await db.delete(resource)
         deleted += 1
     await db.commit()
@@ -228,9 +230,9 @@ async def update_resource(
             raise HTTPException(status_code=400, detail="Invalid folder path")
         old_folder = resource.folder
         if new_folder != old_folder:
-            if resource.url and resource.type in ("image", "video"):
-                old_path = MEDIA_DIR / (old_folder or "") / resource.url
-                new_path = MEDIA_DIR / (new_folder or "") / resource.url
+            if resource.filename:
+                old_path = MEDIA_DIR / (old_folder or "") / resource.filename
+                new_path = MEDIA_DIR / (new_folder or "") / resource.filename
                 if old_path.is_file():
                     new_path.parent.mkdir(parents=True, exist_ok=True)
                     shutil.move(str(old_path), str(new_path))
@@ -246,11 +248,11 @@ async def delete_resource(resource_id: int, db: AsyncSession = Depends(get_db)):
     resource = await db.get(Resource, resource_id)
     if not resource:
         raise HTTPException(status_code=404, detail="Resource not found")
-    if resource.url and resource.type in ("image", "video"):
-        src = MEDIA_DIR / (resource.folder or "") / resource.url
+    if resource.filename:
+        src = MEDIA_DIR / (resource.folder or "") / resource.filename
         if src.is_file():
             TRASH_DIR.mkdir(parents=True, exist_ok=True)
-            shutil.move(str(src), str(TRASH_DIR / resource.url))
+            shutil.move(str(src), str(TRASH_DIR / resource.filename))
     await db.delete(resource)
     await db.commit()
 
@@ -306,9 +308,14 @@ async def _bg_download(url: str, ext: str) -> None:
         with open(dest, "wb") as f:
             f.write(content)
 
-    resource_type = "video" if ext in VIDEO_EXTENSIONS else "image"
+    category = "video" if ext in VIDEO_EXTENSIONS else "image"
     async with async_session() as db:
-        resource = Resource(type=resource_type, title=filename, url=filename)
+        existing = await db.scalar(
+            select(Resource).where(Resource.filename == filename)
+        )
+        if existing:
+            return
+        resource = Resource(category=category, title=filename, filename=filename)
         db.add(resource)
         await db.commit()
 
@@ -346,18 +353,18 @@ async def upload_resource(
         with open(dest, "wb") as f:
             f.write(content)
 
-    resource_type = "image"
+    category = "image"
     if ext in VIDEO_EXTENSIONS:
-        resource_type = "video"
+        category = "video"
     elif ext not in IMAGE_EXTENSIONS:
         raise HTTPException(
             status_code=400, detail=f"Unsupported file extension: {ext}"
         )
 
     resource = Resource(
-        type=resource_type,
+        category=category,
         title=title or file.filename,
-        url=new_name,
+        filename=new_name,
     )
     if tags:
         tag_names = [t.strip() for t in tags.split(",") if t.strip()]

@@ -4,7 +4,7 @@ from enum import Enum
 from pydantic import BaseModel
 
 
-class ResourceType(str, Enum):
+class ResourceCategory(str, Enum):
     image = "image"
     video = "video"
 
@@ -23,14 +23,13 @@ class TagResponse(BaseModel):
 
 
 class ResourceCreate(BaseModel):
-    type: ResourceType
-    url: str | None = None
+    category: ResourceCategory
+    filename: str | None = None
     title: str | None = None
     tags: list[str] = []
 
 
 class ResourceUpdate(BaseModel):
-    url: str | None = None
     title: str | None = None
     folder: str | None = None
     tags: list[str] | None = None
@@ -38,8 +37,8 @@ class ResourceUpdate(BaseModel):
 
 class ResourceResponse(BaseModel):
     id: int
-    type: ResourceType
-    url: str | None
+    category: ResourceCategory
+    filename: str | None
     title: str | None
     folder: str | None = None
     created_at: datetime
@@ -62,7 +61,7 @@ class ScanRequest(BaseModel):
 class ScannedFile(BaseModel):
     path: str
     name: str
-    type: ResourceType
+    type: ResourceCategory
     size: int
 
 
@@ -72,7 +71,7 @@ class ScanResponse(BaseModel):
 
 class ImportFileItem(BaseModel):
     path: str
-    type: ResourceType
+    type: ResourceCategory
 
 
 class ImportRequest(BaseModel):
@@ -100,7 +99,7 @@ class BatchDeleteResponse(BaseModel):
 
 
 class BookmarkCreate(BaseModel):
-    title: str
+    title: str | None = None
     url: str
     description: str | None = None
     folder: str | None = None
@@ -117,7 +116,7 @@ class BookmarkUpdate(BaseModel):
 
 class BookmarkResponse(BaseModel):
     id: int
-    title: str
+    title: str | None
     url: str
     description: str | None
     folder: str | None

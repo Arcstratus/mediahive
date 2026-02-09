@@ -79,7 +79,9 @@ async def execute_import(body: ImportRequest, db: AsyncSession = Depends(get_db)
         dest = MEDIA_DIR / new_name
 
         # Check if resource with same url (hash filename) already exists
-        existing = await db.scalar(select(Resource).where(Resource.url == new_name))
+        existing = await db.scalar(
+            select(Resource).where(Resource.filename == new_name)
+        )
         if existing:
             skipped += 1
             continue
@@ -87,7 +89,7 @@ async def execute_import(body: ImportRequest, db: AsyncSession = Depends(get_db)
         if not dest.exists():
             shutil.copy2(src, dest)
 
-        resource = Resource(type=item.type.value, title=src.name, url=new_name)
+        resource = Resource(category=item.type.value, title=src.name, filename=new_name)
         db.add(resource)
         imported += 1
 
