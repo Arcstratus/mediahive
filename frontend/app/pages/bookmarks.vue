@@ -347,52 +347,54 @@ function formatDate(dateStr: string) {
 
     <!-- Tree View -->
     <template v-else>
-      <UTree
-        v-if="treeItems.length"
-        :items="treeItems"
-        size="lg"
-        collapsed-icon="i-lucide-folder"
-        expanded-icon="i-lucide-folder-open"
-      >
-        <template #bookmark-item="{ item }">
-          <div class="flex items-center gap-2 group w-full">
-            <UIcon name="i-lucide-bookmark" class="size-4 text-primary shrink-0" />
-            <a
-              :href="item.value?.url"
-              target="_blank"
-              class="text-primary hover:underline truncate"
-            >
-              {{ item.label }}
-            </a>
-            <div v-if="item.value?.tags?.length" class="flex gap-1 ml-2">
-              <UBadge
-                v-for="tag in item.value.tags"
-                :key="tag.id"
-                :label="tag.name"
-                variant="subtle"
-                size="xs"
-              />
+      <ClientOnly>
+        <UTree
+          v-if="treeItems.length"
+          :items="treeItems"
+          size="lg"
+          collapsed-icon="i-lucide-folder"
+          expanded-icon="i-lucide-folder-open"
+        >
+          <template #bookmark-item="{ item }">
+            <div class="flex items-center gap-2 group w-full">
+              <UIcon name="i-lucide-bookmark" class="size-4 text-primary shrink-0" />
+              <a
+                :href="item.value?.url"
+                target="_blank"
+                class="text-primary hover:underline truncate"
+              >
+                {{ item.label }}
+              </a>
+              <div v-if="item.value?.tags?.length" class="flex gap-1 ml-2">
+                <UBadge
+                  v-for="tag in item.value.tags"
+                  :key="tag.id"
+                  :label="tag.name"
+                  variant="subtle"
+                  size="xs"
+                />
+              </div>
+              <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <UButton
+                  icon="i-lucide-pencil"
+                  variant="ghost"
+                  color="neutral"
+                  size="xs"
+                  @click.stop="openEdit(item.value)"
+                />
+                <UButton
+                  icon="i-lucide-trash-2"
+                  variant="ghost"
+                  color="error"
+                  size="xs"
+                  @click.stop="deleteBookmark(item.value.id)"
+                />
+              </div>
             </div>
-            <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <UButton
-                icon="i-lucide-pencil"
-                variant="ghost"
-                color="neutral"
-                size="xs"
-                @click.stop="openEdit(item.value)"
-              />
-              <UButton
-                icon="i-lucide-trash-2"
-                variant="ghost"
-                color="error"
-                size="xs"
-                @click.stop="deleteBookmark(item.value.id)"
-              />
-            </div>
-          </div>
-        </template>
-      </UTree>
-      <p v-else class="text-sm text-muted">No bookmarks yet.</p>
+          </template>
+        </UTree>
+        <p v-else class="text-sm text-muted">No bookmarks yet.</p>
+      </ClientOnly>
     </template>
 
     <BookmarkModal v-model:open="modalOpen" :bookmark="editingBookmark" @saved="onBookmarkSaved" />

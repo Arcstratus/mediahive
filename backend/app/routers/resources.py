@@ -67,6 +67,7 @@ async def list_resources(
     search: str | None = Query(None),
     ext: list[str] = Query(None),
     tag: list[str] = Query(None),
+    folder: str | None = Query(None),
     sort_by: str = Query("created_at"),
     sort_desc: bool = Query(True),
     db: AsyncSession = Depends(get_db),
@@ -75,6 +76,10 @@ async def list_resources(
 
     base_query = select(Resource)
     count_query = select(func.count(Resource.id))
+
+    if folder:
+        base_query = base_query.where(Resource.folder == folder)
+        count_query = count_query.where(Resource.folder == folder)
 
     if type:
         base_query = base_query.where(Resource.type == type)
@@ -118,12 +123,15 @@ async def list_resource_ids(
     search: str | None = Query(None),
     ext: list[str] = Query(None),
     tag: list[str] = Query(None),
+    folder: str | None = Query(None),
     sort_by: str = Query("created_at"),
     sort_desc: bool = Query(True),
     db: AsyncSession = Depends(get_db),
 ):
     query = select(Resource.id)
 
+    if folder:
+        query = query.where(Resource.folder == folder)
     if type:
         query = query.where(Resource.type == type)
     if search:

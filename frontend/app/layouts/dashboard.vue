@@ -16,14 +16,9 @@ const items = [
     to: '/bookmarks'
   },
   {
-    label: 'Image Viewer',
-    icon: 'i-lucide-image',
-    to: '/resources/images/viewer'
-  },
-  {
-    label: 'Video Viewer',
-    icon: 'i-lucide-clapperboard',
-    to: '/resources/videos/viewer'
+    label: 'Viewer',
+    icon: 'i-lucide-eye',
+    to: '/resources/viewer'
   },
   {
     label: 'Tags',

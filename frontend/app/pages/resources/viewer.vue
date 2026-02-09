@@ -37,12 +37,11 @@ const currentIndex = computed(() => {
 const totalCount = computed(() => ids.value.length)
 
 const resourceCache = new Map<number, Resource>()
+const imageCache = new Map<string, HTMLImageElement>()
 const preloadedVideos = new Set<string>()
 
 async function fetchIds() {
-  ids.value = await $fetch<number[]>(`${apiBase}/resources/ids`, {
-    query: { type: 'video' }
-  })
+  ids.value = await $fetch<number[]>(`${apiBase}/resources/ids`)
 }
 
 async function fetchResource(id: number) {
@@ -60,12 +59,25 @@ async function fetchResource(id: number) {
   form.tags = resource.value.tags.map(t => t.name)
 }
 
-function preloadVideo(res: Resource) {
+function getMediaUrl(res: Resource): string {
+  if (!res.url) return ''
+  return `${apiBase}/media/${res.folder ? res.folder + '/' : ''}${res.url}`
+}
+
+function preloadMedia(res: Resource) {
   if (!res.url) return
-  const fullUrl = `${apiBase}/media/${res.folder ? res.folder + '/' : ''}${res.url}`
-  if (preloadedVideos.has(fullUrl)) return
-  preloadedVideos.add(fullUrl)
-  fetch(fullUrl).catch(() => {})
+  const fullUrl = getMediaUrl(res)
+  if (res.type === 'image') {
+    if (imageCache.has(fullUrl)) return
+    const img = new Image()
+    img.src = fullUrl
+    imageCache.set(fullUrl, img)
+  }
+  else {
+    if (preloadedVideos.has(fullUrl)) return
+    preloadedVideos.add(fullUrl)
+    fetch(fullUrl).catch(() => {})
+  }
 }
 
 async function preloadResource(id: number) {
@@ -76,7 +88,7 @@ async function preloadResource(id: number) {
     }
     catch { return }
   }
-  preloadVideo(resourceCache.get(id)!)
+  preloadMedia(resourceCache.get(id)!)
 }
 
 function preloadAdjacent() {
@@ -89,7 +101,7 @@ function preloadAdjacent() {
   }
 }
 
-function navigateTo(id: number) {
+function navigateToId(id: number) {
   currentId.value = id
   router.replace({ query: { id: String(id) } })
   fetchResource(id).then(() => preloadAdjacent())
@@ -97,12 +109,12 @@ function navigateTo(id: number) {
 
 function prev() {
   const idx = currentIndex.value
-  if (idx > 0) navigateTo(ids.value[idx - 1])
+  if (idx > 0) navigateToId(ids.value[idx - 1])
 }
 
 function next() {
   const idx = currentIndex.value
-  if (idx < ids.value.length - 1) navigateTo(ids.value[idx + 1])
+  if (idx < ids.value.length - 1) navigateToId(ids.value[idx + 1])
 }
 
 function onKeydown(e: KeyboardEvent) {
@@ -118,7 +130,7 @@ onMounted(async () => {
   if (ids.value.length === 0) return
   const queryId = Number(route.query.id)
   const startId = queryId && ids.value.includes(queryId) ? queryId : ids.value[0]
-  navigateTo(startId)
+  navigateToId(startId)
 })
 
 onUnmounted(() => {
@@ -127,17 +139,17 @@ onUnmounted(() => {
 
 async function deleteResource() {
   if (!currentId.value) return
-  if (!confirm('Are you sure you want to delete this video?')) return
+  if (!confirm('Are you sure you want to delete this resource?')) return
   await $fetch(`${apiBase}/resources/${currentId.value}`, { method: 'DELETE' })
   const idx = currentIndex.value
   ids.value.splice(idx, 1)
   resourceCache.delete(currentId.value)
   if (ids.value.length === 0) {
-    router.replace('/resources/videos')
+    router.replace('/resources')
     return
   }
   const nextId = ids.value[Math.min(idx, ids.value.length - 1)]
-  navigateTo(nextId)
+  navigateToId(nextId)
 }
 
 async function saveForm() {
@@ -162,22 +174,28 @@ async function saveForm() {
     <UBreadcrumb
       :items="[
         { label: 'Resources', to: '/resources' },
-        { label: 'Videos', to: '/resources/videos' },
         { label: 'Viewer' }
       ]"
     />
 
     <div v-if="ids.length === 0" class="text-center text-gray-500 py-12">
-      No videos found.
+      No resources found.
     </div>
 
     <div v-else-if="resource" class="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
       <div class="flex flex-col gap-4">
         <div class="flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg min-h-[400px]">
+          <img
+            v-if="resource.type === 'image'"
+            :src="getMediaUrl(resource)"
+            :alt="resource.title ?? ''"
+            class="max-h-[70vh] max-w-full object-contain"
+          >
           <video
+            v-else
             :key="resource.id"
             controls
-            :src="apiBase + '/media/' + (resource.folder ? resource.folder + '/' : '') + resource.url"
+            :src="getMediaUrl(resource)"
             class="max-h-[70vh] max-w-full"
           />
         </div>
@@ -193,8 +211,9 @@ async function saveForm() {
         <h2 class="text-lg font-semibold truncate">
           {{ resource.title || 'Untitled' }}
         </h2>
+        <UBadge :label="resource.type" :color="resource.type === 'image' ? 'info' : 'warning'" variant="subtle" size="sm" class="w-fit" />
         <UFormField label="Title" name="title">
-          <UInput v-model="form.title" placeholder="Video title" class="w-full" />
+          <UInput v-model="form.title" placeholder="Title" class="w-full" />
         </UFormField>
         <UFormField label="Folder" name="folder">
           <UInput v-model="form.folder" placeholder="e.g. 2024/vacation" class="w-full" />
