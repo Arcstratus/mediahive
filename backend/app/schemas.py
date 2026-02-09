@@ -83,3 +83,10 @@ class ImportRequest(BaseModel):
 class ImportResponse(BaseModel):
     imported: int
     skipped: int
+
+
+class StatsResponse(BaseModel):
+    images: int
+    videos: int
+    urls: int
+    tags: int
