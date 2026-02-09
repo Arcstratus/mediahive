@@ -110,6 +110,42 @@ async def list_resources(
     return PaginatedResponse(items=items, total=total, page=page, per_page=per_page)
 
 
+@router.get("/resources/ids", response_model=list[int])
+async def list_resource_ids(
+    type: str | None = Query(None),
+    search: str | None = Query(None),
+    ext: list[str] = Query(None),
+    tag: list[str] = Query(None),
+    sort_by: str = Query("created_at"),
+    sort_desc: bool = Query(True),
+    db: AsyncSession = Depends(get_db),
+):
+    query = select(Resource.id)
+
+    if type:
+        query = query.where(Resource.type == type)
+    if search:
+        query = query.where(
+            or_(Resource.title.icontains(search), Resource.url.icontains(search))
+        )
+    if ext:
+        query = query.where(or_(*[Resource.url.endswith(e) for e in ext]))
+    if tag:
+        for t in tag:
+            tag_subq = (
+                select(resource_tags.c.resource_id)
+                .join(Tag)
+                .where(Tag.name.icontains(t))
+            )
+            query = query.where(Resource.id.in_(tag_subq))
+
+    col = SORTABLE_COLUMNS.get(sort_by, Resource.created_at)
+    order = desc(col) if sort_desc else asc(col)
+
+    result = await db.execute(query.order_by(order))
+    return list(result.scalars().all())
+
+
 @router.get("/resources/{resource_id}", response_model=ResourceResponse)
 async def get_resource(resource_id: int, db: AsyncSession = Depends(get_db)):
     resource = await db.get(Resource, resource_id)

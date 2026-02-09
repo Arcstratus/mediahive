@@ -11,6 +11,16 @@ const items = [
     to: '/resources'
   },
   {
+    label: 'Image Viewer',
+    icon: 'i-lucide-image',
+    to: '/resources/images/viewer'
+  },
+  {
+    label: 'Video Viewer',
+    icon: 'i-lucide-clapperboard',
+    to: '/resources/videos/viewer'
+  },
+  {
     label: 'Tags',
     icon: 'i-lucide-tag',
     to: '/tags'

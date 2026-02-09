@@ -27,7 +27,7 @@ interface PaginatedResponse {
   per_page: number
 }
 
-const VIDEO_EXTENSIONS = ['.mp4', '.mkv', '.avi', '.mov', '.wmv', '.flv', '.webm', '.m4v', '.ts']
+const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tiff', '.svg']
 
 const { public: { apiBase } } = useRuntimeConfig()
 
@@ -39,10 +39,10 @@ const filterExt = ref<string[]>([])
 const sorting = ref<{ id: string, desc: boolean }[]>([])
 
 const extOptions = computed(() =>
-  VIDEO_EXTENSIONS.map(e => ({ label: e, value: e }))
+  IMAGE_EXTENSIONS.map(e => ({ label: e, value: e }))
 )
 
-const { data: allTags, refresh: refreshTags } = await useAsyncData<Tag[]>('video-tags', () =>
+const { data: allTags, refresh: refreshTags } = await useAsyncData<Tag[]>('image-tags', () =>
   $fetch(`${apiBase}/tags`)
 )
 
@@ -51,10 +51,10 @@ const tagFilterOptions = computed(() =>
 )
 
 const { data, refresh } = await useAsyncData<PaginatedResponse>(
-  'video-resources',
+  'image-resources',
   () => {
     const query: Record<string, unknown> = {
-      type: 'video',
+      type: 'image',
       page: page.value,
       per_page: perPage
     }
@@ -131,7 +131,7 @@ async function submitForm() {
 }
 
 async function deleteResource(id: number) {
-  if (!confirm('Are you sure you want to delete this video?')) return
+  if (!confirm('Are you sure you want to delete this image?')) return
   await $fetch(`${apiBase}/resources/${id}`, { method: 'DELETE' })
   await refresh()
 }
@@ -195,13 +195,13 @@ async function submitUpload() {
     <UBreadcrumb
       :items="[
         { label: 'Resources', to: '/resources' },
-        { label: 'Videos' }
+        { label: 'Images' }
       ]"
     />
 
     <div class="flex items-center justify-between">
-      <h1 class="text-2xl font-bold">Video Resources</h1>
-      <UButton label="Add Video" icon="i-lucide-plus" @click="openUpload" />
+      <h1 class="text-2xl font-bold">Image Resources</h1>
+      <UButton label="Add Image" icon="i-lucide-plus" @click="openUpload" />
     </div>
 
     <div class="flex items-center gap-2">
@@ -256,6 +256,13 @@ async function submitUpload() {
       <template #actions-cell="{ row }">
         <div class="flex gap-1 justify-end">
           <UButton
+            icon="i-lucide-eye"
+            variant="ghost"
+            color="neutral"
+            size="xs"
+            :to="`/resources/images/viewer?id=${row.original.id}`"
+          />
+          <UButton
             icon="i-lucide-pencil"
             variant="ghost"
             color="neutral"
@@ -278,11 +285,11 @@ async function submitUpload() {
     </div>
 
     <!-- Edit modal -->
-    <UModal v-model:open="modalOpen" title="Edit Video">
+    <UModal v-model:open="modalOpen" title="Edit Image">
       <template #body>
         <div class="flex flex-col gap-4">
           <UFormField label="Title" name="title">
-            <UInput v-model="form.title" placeholder="Video title" class="w-full" />
+            <UInput v-model="form.title" placeholder="Image title" class="w-full" />
           </UFormField>
           <UFormField label="Tags" name="tags">
             <UInputTags v-model="form.tags" placeholder="Add tags..." :add-on-blur="true" class="w-full" />
@@ -298,14 +305,14 @@ async function submitUpload() {
     </UModal>
 
     <!-- Upload modal -->
-    <UModal v-model:open="uploadOpen" title="Upload Video">
+    <UModal v-model:open="uploadOpen" title="Upload Image">
       <template #body>
         <div class="flex flex-col gap-4">
           <UFormField label="File" name="file">
-            <input type="file" accept="video/*" @change="onFileChange">
+            <input type="file" accept="image/*" @change="onFileChange">
           </UFormField>
           <UFormField label="Title" name="title">
-            <UInput v-model="uploadForm.title" placeholder="Video title (optional)" class="w-full" />
+            <UInput v-model="uploadForm.title" placeholder="Image title (optional)" class="w-full" />
           </UFormField>
           <UFormField label="Tags" name="tags">
             <UInputTags v-model="uploadForm.tags" placeholder="Add tags..." :add-on-blur="true" class="w-full" />
