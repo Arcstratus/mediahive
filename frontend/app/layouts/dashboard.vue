@@ -11,6 +11,11 @@ const items = [
     to: '/resources'
   },
   {
+    label: 'Bookmarks',
+    icon: 'i-lucide-bookmark',
+    to: '/bookmarks'
+  },
+  {
     label: 'Image Viewer',
     icon: 'i-lucide-image',
     to: '/resources/images/viewer'

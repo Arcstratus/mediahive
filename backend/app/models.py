@@ -12,6 +12,13 @@ resource_tags = Table(
     Column("tag_id", Integer, ForeignKey("tags.id", ondelete="CASCADE")),
 )
 
+bookmark_tags = Table(
+    "bookmark_tags",
+    Base.metadata,
+    Column("bookmark_id", Integer, ForeignKey("bookmarks.id", ondelete="CASCADE")),
+    Column("tag_id", Integer, ForeignKey("tags.id", ondelete="CASCADE")),
+)
+
 
 class Tag(Base):
     __tablename__ = "tags"
@@ -24,6 +31,9 @@ class Tag(Base):
 
     resources: Mapped[list["Resource"]] = relationship(
         secondary=resource_tags, back_populates="tags"
+    )
+    bookmarks: Mapped[list["Bookmark"]] = relationship(
+        secondary=bookmark_tags, back_populates="tags"
     )
 
 
@@ -41,4 +51,21 @@ class Resource(Base):
 
     tags: Mapped[list["Tag"]] = relationship(
         secondary=resource_tags, back_populates="resources", lazy="selectin"
+    )
+
+
+class Bookmark(Base):
+    __tablename__ = "bookmarks"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    url: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str | None] = mapped_column(String, nullable=True)
+    folder: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), nullable=False
+    )
+
+    tags: Mapped[list["Tag"]] = relationship(
+        secondary=bookmark_tags, back_populates="bookmarks", lazy="selectin"
     )

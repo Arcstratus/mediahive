@@ -10,7 +10,7 @@ sys.path.insert(0, str(BACKEND_DIR))
 from sqlalchemy import select  # noqa: E402
 
 from app.database import Base, async_session, engine  # noqa: E402
-from app.models import Resource, Tag, resource_tags  # noqa: E402
+from app.models import Bookmark, Tag, bookmark_tags  # noqa: E402
 
 FIXTURES_PATH = BACKEND_DIR / "fixtures" / "resources.json"
 
@@ -22,7 +22,7 @@ async def main():
         await conn.run_sync(Base.metadata.create_all)
 
     data = json.loads(FIXTURES_PATH.read_text())
-    print(f"Loading {len(data)} resources from {FIXTURES_PATH.name}")
+    print(f"Loading {len(data)} bookmarks from {FIXTURES_PATH.name}")
 
     async with async_session() as session:
         # Build a tag cache so each unique name is created once
@@ -40,27 +40,27 @@ async def main():
             result = await session.execute(select(Tag).where(Tag.name == tag_name))
             tag_cache[tag_name] = result.scalar_one()
 
-        # Second pass: create resources and link tags
+        # Second pass: create bookmarks and link tags
         for item in data:
-            resource = Resource(
-                type=item["type"],
-                url=item.get("url"),
-                title=item.get("title"),
+            bookmark = Bookmark(
+                title=item["title"],
+                url=item["url"],
+                description=item.get("description"),
             )
-            session.add(resource)
+            session.add(bookmark)
             await session.flush()
 
             for tag_name in item.get("tags", []):
                 await session.execute(
-                    resource_tags.insert().values(
-                        resource_id=resource.id,
+                    bookmark_tags.insert().values(
+                        bookmark_id=bookmark.id,
                         tag_id=tag_cache[tag_name].id,
                     )
                 )
 
         await session.commit()
 
-    print(f"Imported {len(data)} resources.")
+    print(f"Imported {len(data)} bookmarks.")
     await engine.dispose()
 
 

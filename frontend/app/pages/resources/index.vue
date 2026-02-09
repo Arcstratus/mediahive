@@ -25,12 +25,10 @@ const { data, refresh } = await useAsyncData<PaginatedResponse>('all-resources',
 )
 
 const items = computed(() => data.value?.items ?? [])
-const urlCount = computed(() => items.value.filter(r => r.type === 'url').length)
 const imageCount = computed(() => items.value.filter(r => r.type === 'image').length)
 const videoCount = computed(() => items.value.filter(r => r.type === 'video').length)
 
 const cards = [
-  { label: 'URLs', icon: 'i-lucide-link', to: '/resources/urls', count: urlCount },
   { label: 'Images', icon: 'i-lucide-image', to: '/resources/images', count: imageCount },
   { label: 'Videos', icon: 'i-lucide-video', to: '/resources/videos', count: videoCount }
 ]
@@ -56,7 +54,7 @@ async function onImported() {
       />
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <NuxtLink v-for="card in cards" :key="card.label" :to="card.to">
         <UCard class="hover:ring-1 hover:ring-primary transition">
           <template #header>

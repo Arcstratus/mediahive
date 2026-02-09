@@ -30,7 +30,7 @@ interface PaginatedResponse {
 interface Stats {
   images: number
   videos: number
-  urls: number
+  bookmarks: number
   tags: number
 }
 
@@ -55,7 +55,7 @@ const recentResources = computed(() => recentData.value?.items ?? [])
 const statCards = computed(() => [
   { label: 'Images', icon: 'i-lucide-image', count: stats.value?.images ?? 0, to: '/resources/images' },
   { label: 'Videos', icon: 'i-lucide-video', count: stats.value?.videos ?? 0, to: '/resources/videos' },
-  { label: 'URLs', icon: 'i-lucide-link', count: stats.value?.urls ?? 0, to: '/resources/urls' },
+  { label: 'Bookmarks', icon: 'i-lucide-bookmark', count: stats.value?.bookmarks ?? 0, to: '/bookmarks' },
   { label: 'Tags', icon: 'i-lucide-tags', count: stats.value?.tags ?? 0, to: '/tags' },
 ])
 
@@ -129,6 +129,13 @@ async function submitUpload() {
   }
 }
 
+// Bookmark modal
+const bookmarkOpen = ref(false)
+
+async function onBookmarkSaved() {
+  await Promise.all([refreshStats(), refreshRecent(), refreshTags()])
+}
+
 // Import folder modal
 const importOpen = ref(false)
 
@@ -171,7 +178,7 @@ async function onImported() {
             <NuxtLink
               v-for="resource in recentResources"
               :key="resource.id"
-              :to="resource.type === 'url' ? undefined : `/resources/${resource.type === 'image' ? 'images' : 'videos'}/viewer?id=${resource.id}`"
+              :to="`/resources/${resource.type === 'image' ? 'images' : 'videos'}/viewer?id=${resource.id}`"
               class="group flex flex-col gap-1"
             >
               <div class="aspect-square rounded-lg bg-elevated overflow-hidden flex items-center justify-center">
@@ -182,13 +189,8 @@ async function onImported() {
                   class="size-full object-cover group-hover:scale-105 transition"
                 >
                 <UIcon
-                  v-else-if="resource.type === 'video'"
-                  name="i-lucide-video"
-                  class="size-10 text-muted"
-                />
-                <UIcon
                   v-else
-                  name="i-lucide-link"
+                  name="i-lucide-video"
                   class="size-10 text-muted"
                 />
               </div>
@@ -215,11 +217,11 @@ async function onImported() {
               @click="openUpload()"
             />
             <UButton
-              label="Add URL"
-              icon="i-lucide-link"
+              label="Add Bookmark"
+              icon="i-lucide-bookmark"
               variant="soft"
               block
-              to="/resources/urls"
+              @click="bookmarkOpen = true"
             />
             <UButton
               label="Import Folder"
@@ -280,6 +282,9 @@ async function onImported() {
         </div>
       </template>
     </UModal>
+
+    <!-- Bookmark Modal -->
+    <BookmarkModal v-model:open="bookmarkOpen" @saved="onBookmarkSaved" />
 
     <!-- Import Folder Modal -->
     <ImportFolderModal v-model:open="importOpen" @imported="onImported" />

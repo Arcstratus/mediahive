@@ -5,7 +5,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import MEDIA_DIR
 from app.database import lifespan
-from app.routers import health, imports, resources, stats, tags
+from app.routers import bookmarks, health, imports, resources, stats, tags
 
 app = FastAPI(title="MediaHive", version="0.1.0", lifespan=lifespan)
 
@@ -21,6 +21,7 @@ app.include_router(health.router, prefix="/api")
 app.include_router(resources.router, prefix="/api")
 app.include_router(tags.router, prefix="/api")
 app.include_router(imports.router, prefix="/api")
+app.include_router(bookmarks.router, prefix="/api")
 app.include_router(stats.router, prefix="/api")
 
 MEDIA_DIR.mkdir(parents=True, exist_ok=True)

@@ -5,7 +5,6 @@ from pydantic import BaseModel
 
 
 class ResourceType(str, Enum):
-    url = "url"
     image = "image"
     video = "video"
 
@@ -88,7 +87,7 @@ class ImportResponse(BaseModel):
 class StatsResponse(BaseModel):
     images: int
     videos: int
-    urls: int
+    bookmarks: int
     tags: int
 
 
@@ -98,3 +97,38 @@ class BatchDeleteRequest(BaseModel):
 
 class BatchDeleteResponse(BaseModel):
     deleted: int
+
+
+class BookmarkCreate(BaseModel):
+    title: str
+    url: str
+    description: str | None = None
+    folder: str | None = None
+    tags: list[str] = []
+
+
+class BookmarkUpdate(BaseModel):
+    title: str | None = None
+    url: str | None = None
+    description: str | None = None
+    folder: str | None = None
+    tags: list[str] | None = None
+
+
+class BookmarkResponse(BaseModel):
+    id: int
+    title: str
+    url: str
+    description: str | None
+    folder: str | None
+    created_at: datetime
+    tags: list[TagResponse] = []
+
+    model_config = {"from_attributes": True}
+
+
+class PaginatedBookmarkResponse(BaseModel):
+    items: list[BookmarkResponse]
+    total: int
+    page: int
+    per_page: int

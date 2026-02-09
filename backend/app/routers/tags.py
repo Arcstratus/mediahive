@@ -3,7 +3,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import Tag, resource_tags
+from app.models import Tag, bookmark_tags, resource_tags
 from app.schemas import TagCreate, TagResponse
 
 router = APIRouter(tags=["Tags"])
@@ -23,17 +23,26 @@ async def create_tag(body: TagCreate, db: AsyncSession = Depends(get_db)):
 
 @router.get("/tags", response_model=list[TagResponse])
 async def list_tags(db: AsyncSession = Depends(get_db)):
-    count_subq = (
-        select(resource_tags.c.tag_id, func.count().label("resource_count"))
+    resource_count_subq = (
+        select(resource_tags.c.tag_id, func.count().label("cnt"))
         .group_by(resource_tags.c.tag_id)
+        .subquery()
+    )
+    bookmark_count_subq = (
+        select(bookmark_tags.c.tag_id, func.count().label("cnt"))
+        .group_by(bookmark_tags.c.tag_id)
         .subquery()
     )
     result = await db.execute(
         select(
             Tag,
-            func.coalesce(count_subq.c.resource_count, 0).label("resource_count"),
+            (
+                func.coalesce(resource_count_subq.c.cnt, 0)
+                + func.coalesce(bookmark_count_subq.c.cnt, 0)
+            ).label("resource_count"),
         )
-        .outerjoin(count_subq, Tag.id == count_subq.c.tag_id)
+        .outerjoin(resource_count_subq, Tag.id == resource_count_subq.c.tag_id)
+        .outerjoin(bookmark_count_subq, Tag.id == bookmark_count_subq.c.tag_id)
         .order_by(Tag.name)
     )
     return [
