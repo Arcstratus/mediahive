@@ -29,6 +29,8 @@ interface PaginatedResponse {
 
 const { public: { apiBase } } = useRuntimeConfig()
 
+const page = ref(1)
+const perPage = 20
 const filterTag = ref<string>('')
 
 const { data: allTags, refresh: refreshTags } = await useAsyncData<Tag[]>('tags', () =>
@@ -43,14 +45,22 @@ const tagFilterOptions = computed(() => [
 const { data, refresh } = await useAsyncData<PaginatedResponse>(
   'url-resources',
   () => $fetch(`${apiBase}/resources`, {
-    query: { per_page: 100, ...(filterTag.value ? { tag: filterTag.value } : {}) }
+    query: {
+      type: 'url',
+      page: page.value,
+      per_page: perPage,
+      ...(filterTag.value ? { tag: filterTag.value } : {})
+    }
   }),
-  { watch: [filterTag] }
+  { watch: [filterTag, page] }
 )
 
-const resources = computed(() =>
-  (data.value?.items ?? []).filter(r => r.type === 'url')
-)
+const resources = computed(() => data.value?.items ?? [])
+const total = computed(() => data.value?.total ?? 0)
+
+watch(filterTag, () => {
+  page.value = 1
+})
 
 const columns: TableColumn<Resource>[] = [
   { accessorKey: 'title', header: 'Title' },
@@ -87,7 +97,8 @@ async function submitForm() {
       method: 'PUT',
       body: { title: form.title, url: form.url, tags: form.tags }
     })
-  } else {
+  }
+  else {
     await $fetch(`${apiBase}/resources`, {
       method: 'POST',
       body: { type: 'url', title: form.title, url: form.url, tags: form.tags }
@@ -185,6 +196,10 @@ function formatDate(dateStr: string) {
         </div>
       </template>
     </UTable>
+
+    <div v-if="total > perPage" class="flex justify-center">
+      <UPagination v-model:page="page" :total="total" :items-per-page="perPage" />
+    </div>
 
     <UModal v-model:open="modalOpen" :title="editingResource ? 'Edit URL' : 'Add URL'">
       <template #body>

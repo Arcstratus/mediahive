@@ -54,7 +54,11 @@ const importing = ref(false)
 const importResult = ref<{ imported: number, skipped: number } | null>(null)
 
 const fileColumns: TableColumn<ScannedFile>[] = [
-  { accessorKey: 'name', header: 'Name' },
+  {
+    accessorKey: 'name',
+    header: 'Name',
+    meta: { class: { td: 'max-w-[300px]' } }
+  },
   { accessorKey: 'type', header: 'Type' },
   {
     accessorKey: 'size',
@@ -148,7 +152,7 @@ async function executeImport() {
       </NuxtLink>
     </div>
 
-    <UModal v-model:open="importOpen" title="Import Folder" :ui="{ width: 'sm:max-w-2xl' }">
+    <UModal v-model:open="importOpen" title="Import Folder" :ui="{ width: 'sm:max-w-4xl' }">
       <template #body>
         <!-- Result view -->
         <div v-if="importResult" class="flex flex-col gap-4">
@@ -176,7 +180,10 @@ async function executeImport() {
           </div>
 
           <div v-if="scannedFiles.length > 0">
-            <UTable :data="scannedFiles" :columns="fileColumns">
+            <UTable :data="scannedFiles" :columns="fileColumns" class="table-fixed">
+              <template #name-cell="{ row }">
+                <span class="block truncate" :title="row.original.name">{{ row.original.name }}</span>
+              </template>
               <template #actions-cell="{ row }">
                 <UButton
                   icon="i-lucide-trash-2"

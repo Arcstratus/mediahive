@@ -1,7 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
+from app.config import MEDIA_DIR
 from app.database import lifespan
 from app.routers import health, imports, resources, tags
 
@@ -19,6 +21,9 @@ app.include_router(health.router, prefix="/api")
 app.include_router(resources.router, prefix="/api")
 app.include_router(tags.router, prefix="/api")
 app.include_router(imports.router, prefix="/api")
+
+MEDIA_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/api/media", StaticFiles(directory=MEDIA_DIR), name="media")
 
 
 @app.get("/")

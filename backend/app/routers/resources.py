@@ -42,6 +42,7 @@ async def create_resource(body: ResourceCreate, db: AsyncSession = Depends(get_d
 async def list_resources(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
+    type: str | None = Query(None),
     tag: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
 ):
@@ -49,6 +50,10 @@ async def list_resources(
 
     base_query = select(Resource)
     count_query = select(func.count(Resource.id))
+
+    if type:
+        base_query = base_query.where(Resource.type == type)
+        count_query = count_query.where(Resource.type == type)
 
     if tag:
         base_query = base_query.join(resource_tags).join(Tag).where(Tag.name == tag)
