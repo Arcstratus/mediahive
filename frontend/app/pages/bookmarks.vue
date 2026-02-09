@@ -220,6 +220,33 @@ async function removeTag(bookmark: Bookmark, tagName: string) {
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString()
 }
+
+// Import bookmarks
+const importOpen = ref(false)
+const importText = ref('')
+const importFolder = ref('')
+const importing = ref(false)
+
+async function importBookmarks() {
+  const urls = importText.value.split('\n').map(u => u.trim()).filter(Boolean)
+  if (urls.length === 0) return
+  importing.value = true
+  try {
+    for (const url of urls) {
+      await $fetch(`${apiBase}/bookmarks`, {
+        method: 'POST',
+        body: { title: url, url, folder: importFolder.value || null }
+      })
+    }
+    importText.value = ''
+    importFolder.value = ''
+    importOpen.value = false
+    await refresh()
+  }
+  finally {
+    importing.value = false
+  }
+}
 </script>
 
 <template>
@@ -248,6 +275,7 @@ function formatDate(dateStr: string) {
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-2">
         <UButton label="Add Bookmark" icon="i-lucide-plus" @click="openCreate" />
+        <UButton label="Import" icon="i-lucide-upload" variant="soft" @click="importOpen = true" />
         <UButton
           :label="selectedCount > 0 ? `Delete Selected (${selectedCount})` : 'Delete Selected'"
           icon="i-lucide-trash-2"
@@ -398,5 +426,21 @@ function formatDate(dateStr: string) {
     </template>
 
     <BookmarkModal v-model:open="modalOpen" :bookmark="editingBookmark" @saved="onBookmarkSaved" />
+
+    <UModal v-model:open="importOpen" title="Import Bookmarks">
+      <template #body>
+        <div class="flex flex-col gap-4">
+          <p class="text-sm text-gray-500">Paste URLs, one per line.</p>
+          <UFormField label="Folder" name="importFolder">
+            <UInput v-model="importFolder" placeholder="e.g. tech/articles" class="w-full" />
+          </UFormField>
+          <UTextarea v-model="importText" placeholder="https://example.com&#10;https://another.com" :rows="8" autoresize class="w-full" />
+          <div class="flex justify-end gap-2">
+            <UButton label="Cancel" variant="ghost" color="neutral" @click="importOpen = false" />
+            <UButton label="Import" :loading="importing" :disabled="!importText.trim()" @click="importBookmarks" />
+          </div>
+        </div>
+      </template>
+    </UModal>
   </div>
 </template>
