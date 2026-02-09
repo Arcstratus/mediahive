@@ -8,6 +8,7 @@ dependencies = [
     "fastapi[standard]>=0.128.5",
     "sqlalchemy[asyncio]>=2.0",
     "aiosqlite>=0.20",
+    "httpx>=0.28",
 ]
 
 [dependency-groups]

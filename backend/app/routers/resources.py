@@ -1,15 +1,24 @@
 import hashlib
+import shutil
 from pathlib import Path
+from urllib.parse import urljoin, urlparse
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
+import httpx
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    Query,
+    UploadFile,
+)
+from pydantic import BaseModel
 from sqlalchemy import asc, desc, func, or_, select, type_coerce
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.types import String
 
-import shutil
-
 from app.config import IMAGE_EXTENSIONS, MEDIA_DIR, TRASH_DIR, VIDEO_EXTENSIONS
-from app.database import get_db
+from app.database import async_session, get_db
 from app.models import Resource, Tag, resource_tags
 from app.schemas import (
     BatchDeleteRequest,
@@ -244,6 +253,79 @@ async def delete_resource(resource_id: int, db: AsyncSession = Depends(get_db)):
             shutil.move(str(src), str(TRASH_DIR / resource.url))
     await db.delete(resource)
     await db.commit()
+
+
+class DownloadRequest(BaseModel):
+    url: str
+
+
+async def _download_direct(url: str) -> bytes:
+    async with httpx.AsyncClient(follow_redirects=True, timeout=120.0) as client:
+        resp = await client.get(url)
+        resp.raise_for_status()
+        return resp.content
+
+
+async def _download_m3u8(url: str) -> tuple[bytes, str]:
+    async with httpx.AsyncClient(follow_redirects=True, timeout=120.0) as client:
+        resp = await client.get(url)
+        resp.raise_for_status()
+        playlist = resp.text
+
+        segments: list[str] = []
+        for line in playlist.splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            segments.append(urljoin(url, line))
+
+        chunks: list[bytes] = []
+        for seg_url in segments:
+            seg_resp = await client.get(seg_url)
+            seg_resp.raise_for_status()
+            chunks.append(seg_resp.content)
+
+        return b"".join(chunks), ".ts"
+
+
+_ALLOWED_EXTENSIONS = IMAGE_EXTENSIONS | VIDEO_EXTENSIONS | {".m3u8"}
+
+
+async def _bg_download(url: str, ext: str) -> None:
+    if ext == ".m3u8":
+        content, ext = await _download_m3u8(url)
+    else:
+        content = await _download_direct(url)
+
+    sha256 = hashlib.sha256(content).hexdigest()
+    filename = f"{sha256}{ext}"
+
+    MEDIA_DIR.mkdir(parents=True, exist_ok=True)
+    dest = MEDIA_DIR / filename
+    if not dest.exists():
+        with open(dest, "wb") as f:
+            f.write(content)
+
+    resource_type = "video" if ext in VIDEO_EXTENSIONS else "image"
+    async with async_session() as db:
+        resource = Resource(type=resource_type, title=filename, url=filename)
+        db.add(resource)
+        await db.commit()
+
+
+@router.post("/resources/download", status_code=202)
+async def download_resource(body: DownloadRequest, bg: BackgroundTasks):
+    parsed = urlparse(body.url)
+    ext = Path(parsed.path).suffix.lower()
+
+    if ext not in _ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported URL extension: {ext or '(none)'}",
+        )
+
+    bg.add_task(_bg_download, body.url, ext)
+    return {"status": "downloading"}
 
 
 @router.post("/resources/upload", response_model=ResourceResponse, status_code=201)

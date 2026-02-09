@@ -283,6 +283,35 @@ async function submitUpload() {
   }
 }
 
+// Download URL modal
+const downloadOpen = ref(false)
+const downloadUrl = ref('')
+const downloading = ref(false)
+
+function openDownload() {
+  downloadUrl.value = ''
+  downloading.value = false
+  downloadOpen.value = true
+}
+
+const toast = useToast()
+
+async function submitDownload() {
+  if (!downloadUrl.value) return
+  downloading.value = true
+  try {
+    await $fetch(`${apiBase}/resources/download`, {
+      method: 'POST',
+      body: { url: downloadUrl.value }
+    })
+    downloadOpen.value = false
+    toast.add({ title: 'Download started', description: 'The file is being downloaded in the background.', color: 'info' })
+  }
+  finally {
+    downloading.value = false
+  }
+}
+
 // Import folder modal
 const importOpen = ref(false)
 
@@ -333,6 +362,12 @@ async function onImported() {
           icon="i-lucide-folder-input"
           variant="soft"
           @click="importOpen = true"
+        />
+        <UButton
+          label="Download URL"
+          icon="i-lucide-download"
+          variant="soft"
+          @click="openDownload"
         />
         <UButton
           :label="selectedCount > 0 ? `Delete Selected (${selectedCount})` : 'Delete Selected'"
@@ -530,6 +565,21 @@ async function onImported() {
         <div class="flex justify-end gap-2">
           <UButton label="Cancel" variant="outline" color="neutral" @click="close" />
           <UButton label="Upload" :loading="uploading" :disabled="!uploadFile" @click="submitUpload" />
+        </div>
+      </template>
+    </UModal>
+
+    <!-- Download URL modal -->
+    <UModal v-model:open="downloadOpen" title="Download from URL">
+      <template #body>
+        <UFormField label="URL" name="url">
+          <UInput v-model="downloadUrl" placeholder="https://example.com/file.mp4" class="w-full" />
+        </UFormField>
+      </template>
+      <template #footer="{ close }">
+        <div class="flex justify-end gap-2">
+          <UButton label="Cancel" variant="outline" color="neutral" @click="close" />
+          <UButton label="Download" :loading="downloading" :disabled="!downloadUrl" @click="submitDownload" />
         </div>
       </template>
     </UModal>
