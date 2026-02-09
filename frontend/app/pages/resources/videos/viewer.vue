@@ -125,6 +125,21 @@ onUnmounted(() => {
   window.removeEventListener('keydown', onKeydown)
 })
 
+async function deleteResource() {
+  if (!currentId.value) return
+  if (!confirm('Are you sure you want to delete this video?')) return
+  await $fetch(`${apiBase}/resources/${currentId.value}`, { method: 'DELETE' })
+  const idx = currentIndex.value
+  ids.value.splice(idx, 1)
+  resourceCache.delete(currentId.value)
+  if (ids.value.length === 0) {
+    router.replace('/resources/videos')
+    return
+  }
+  const nextId = ids.value[Math.min(idx, ids.value.length - 1)]
+  navigateTo(nextId)
+}
+
 async function saveForm() {
   if (!currentId.value) return
   saving.value = true
@@ -187,8 +202,9 @@ async function saveForm() {
         <UFormField label="Tags" name="tags">
           <UInputTags v-model="form.tags" placeholder="Add tags..." :add-on-blur="true" class="w-full" />
         </UFormField>
-        <div>
+        <div class="flex gap-2">
           <UButton label="Save" :loading="saving" @click="saveForm" />
+          <UButton label="Delete" icon="i-lucide-trash-2" color="error" variant="soft" @click="deleteResource" />
         </div>
       </div>
     </div>

@@ -12,6 +12,8 @@ from app.config import IMAGE_EXTENSIONS, MEDIA_DIR, TRASH_DIR, VIDEO_EXTENSIONS
 from app.database import get_db
 from app.models import Resource, Tag, resource_tags
 from app.schemas import (
+    BatchDeleteRequest,
+    BatchDeleteResponse,
     PaginatedResponse,
     ResourceCreate,
     ResourceResponse,
@@ -144,6 +146,26 @@ async def list_resource_ids(
 
     result = await db.execute(query.order_by(order))
     return list(result.scalars().all())
+
+
+@router.post("/resources/batch-delete", response_model=BatchDeleteResponse)
+async def batch_delete_resources(
+    body: BatchDeleteRequest, db: AsyncSession = Depends(get_db)
+):
+    deleted = 0
+    for resource_id in body.ids:
+        resource = await db.get(Resource, resource_id)
+        if not resource:
+            continue
+        if resource.url and resource.type in ("image", "video"):
+            src = MEDIA_DIR / (resource.folder or "") / resource.url
+            if src.is_file():
+                TRASH_DIR.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(src), str(TRASH_DIR / resource.url))
+        await db.delete(resource)
+        deleted += 1
+    await db.commit()
+    return BatchDeleteResponse(deleted=deleted)
 
 
 @router.get("/resources/{resource_id}", response_model=ResourceResponse)

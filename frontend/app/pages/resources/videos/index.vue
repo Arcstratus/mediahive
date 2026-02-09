@@ -100,7 +100,37 @@ function sortHeader(label: string) {
   }
 }
 
+const rowSelection = ref<Record<string, boolean>>({})
+
+const selectedCount = computed(() => Object.values(rowSelection.value).filter(Boolean).length)
+
+async function batchDelete() {
+  if (!confirm(`Are you sure you want to delete ${selectedCount.value} selected video(s)?`)) return
+  const ids = Object.keys(rowSelection.value).filter(k => rowSelection.value[k]).map(Number)
+  await $fetch(`${apiBase}/resources/batch-delete`, {
+    method: 'POST',
+    body: { ids }
+  })
+  rowSelection.value = {}
+  await refresh()
+}
+
+const UCheckbox = resolveComponent('UCheckbox')
+
 const columns: TableColumn<Resource>[] = [
+  {
+    id: 'select',
+    header: ({ table }) => h(UCheckbox, {
+      'modelValue': table.getIsSomePageRowsSelected() ? 'indeterminate' : table.getIsAllPageRowsSelected(),
+      'onUpdate:modelValue': (value: boolean) => table.toggleAllPageRowsSelected(!!value),
+      'aria-label': 'Select all'
+    }),
+    cell: ({ row }) => h(UCheckbox, {
+      'modelValue': row.getIsSelected(),
+      'onUpdate:modelValue': (value: boolean) => row.toggleSelected(!!value),
+      'aria-label': 'Select row'
+    })
+  },
   { accessorKey: 'title', header: sortHeader('Title'), maxSize: 300 },
   { id: 'ext', accessorFn: row => getExtension(row.url), header: sortHeader('Extension') },
   { id: 'tags', header: 'Tags' },
@@ -231,7 +261,18 @@ async function submitUpload() {
       />
     </div>
 
-    <UTable v-model:sorting="sorting" :data="resources" :columns="columns" :sorting-options="{ manualSorting: true }">
+    <div class="flex items-center gap-2">
+      <UButton
+        :label="selectedCount > 0 ? `Delete Selected (${selectedCount})` : 'Delete Selected'"
+        icon="i-lucide-trash-2"
+        color="error"
+        variant="soft"
+        :disabled="selectedCount === 0"
+        @click="batchDelete"
+      />
+    </div>
+
+    <UTable v-model:sorting="sorting" v-model:row-selection="rowSelection" :data="resources" :columns="columns" :sorting-options="{ manualSorting: true }" :get-row-id="(row: Resource) => String(row.id)">
       <template #title-cell="{ row }">
         <span class="block max-w-xs truncate" :title="row.original.title ?? ''">{{ row.original.title }}</span>
       </template>

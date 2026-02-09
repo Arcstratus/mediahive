@@ -34,13 +34,6 @@ interface Stats {
   tags: number
 }
 
-interface ScannedFile {
-  path: string
-  name: string
-  type: 'image' | 'video'
-  size: number
-}
-
 const { public: { apiBase } } = useRuntimeConfig()
 
 const { data: stats, refresh: refreshStats } = await useAsyncData<Stats>('dashboard-stats', () =>
@@ -138,58 +131,9 @@ async function submitUpload() {
 
 // Import folder modal
 const importOpen = ref(false)
-const folderPath = ref('')
-const scannedFiles = ref<ScannedFile[]>([])
-const scanned = ref(false)
-const scanning = ref(false)
-const importing = ref(false)
-const importResult = ref<{ imported: number; skipped: number } | null>(null)
 
-function resetImport() {
-  folderPath.value = ''
-  scannedFiles.value = []
-  scanned.value = false
-  importResult.value = null
-  scanning.value = false
-  importing.value = false
-}
-
-async function scanFolder() {
-  scanning.value = true
-  try {
-    const res = await $fetch<{ files: ScannedFile[] }>(`${apiBase}/imports/scan`, {
-      method: 'POST',
-      body: { path: folderPath.value },
-    })
-    scannedFiles.value = res.files
-    scanned.value = true
-  }
-  catch (err) {
-    console.error('Scan failed:', err)
-  }
-  finally {
-    scanning.value = false
-  }
-}
-
-async function executeImport() {
-  importing.value = true
-  try {
-    const res = await $fetch<{ imported: number; skipped: number }>(`${apiBase}/imports/execute`, {
-      method: 'POST',
-      body: {
-        files: scannedFiles.value.map(f => ({ path: f.path, type: f.type })),
-      },
-    })
-    importResult.value = res
-    await Promise.all([refreshStats(), refreshRecent(), refreshTags()])
-  }
-  catch (err) {
-    console.error('Import failed:', err)
-  }
-  finally {
-    importing.value = false
-  }
+async function onImported() {
+  await Promise.all([refreshStats(), refreshRecent(), refreshTags()])
 }
 </script>
 
@@ -282,7 +226,7 @@ async function executeImport() {
               icon="i-lucide-folder-input"
               variant="soft"
               block
-              @click="resetImport(); importOpen = true"
+              @click="importOpen = true"
             />
           </div>
         </UCard>
@@ -338,48 +282,6 @@ async function executeImport() {
     </UModal>
 
     <!-- Import Folder Modal -->
-    <UModal v-model:open="importOpen" title="Import Folder" :ui="{ width: 'sm:max-w-4xl' }">
-      <template #body>
-        <div v-if="importResult" class="flex flex-col gap-4">
-          <p>
-            Imported <strong>{{ importResult.imported }}</strong> file(s),
-            skipped <strong>{{ importResult.skipped }}</strong> duplicate(s).
-          </p>
-        </div>
-        <div v-else class="flex flex-col gap-4">
-          <div class="flex gap-2">
-            <UInput
-              v-model="folderPath"
-              placeholder="/path/to/folder"
-              class="flex-1"
-              :disabled="scanning"
-            />
-            <UButton
-              label="Scan"
-              :loading="scanning"
-              :disabled="!folderPath.trim()"
-              @click="scanFolder"
-            />
-          </div>
-          <p v-if="scannedFiles.length > 0" class="text-sm text-muted">
-            Found {{ scannedFiles.length }} file(s).
-          </p>
-          <p v-else-if="scanned" class="text-sm text-muted">
-            No image or video files found in this folder.
-          </p>
-        </div>
-      </template>
-      <template #footer="{ close }">
-        <div class="flex justify-end gap-2">
-          <UButton label="Close" variant="outline" @click="close" />
-          <UButton
-            v-if="!importResult && scannedFiles.length > 0"
-            label="Import"
-            :loading="importing"
-            @click="executeImport"
-          />
-        </div>
-      </template>
-    </UModal>
+    <ImportFolderModal v-model:open="importOpen" @imported="onImported" />
   </div>
 </template>

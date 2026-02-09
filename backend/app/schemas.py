@@ -90,3 +90,11 @@ class StatsResponse(BaseModel):
     videos: int
     urls: int
     tags: int
+
+
+class BatchDeleteRequest(BaseModel):
+    ids: list[int]
+
+
+class BatchDeleteResponse(BaseModel):
+    deleted: int
