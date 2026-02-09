@@ -11,29 +11,19 @@ const items = [
     to: '/resources'
   },
   {
-    label: 'Bookmarks',
-    icon: 'i-lucide-bookmark',
-    to: '/bookmarks'
-  },
-  {
-    label: 'Viewer',
-    icon: 'i-lucide-eye',
-    to: '/resources/viewer'
-  },
-  {
     label: 'Folders',
     icon: 'i-lucide-folders',
     to: '/folders'
   },
   {
+    label: 'Bookmarks',
+    icon: 'i-lucide-bookmark',
+    to: '/bookmarks'
+  },
+  {
     label: 'Tags',
     icon: 'i-lucide-tag',
     to: '/tags'
-  },
-  {
-    label: 'Settings',
-    icon: 'i-lucide-settings',
-    to: '/settings'
   }
 ]
 </script>
