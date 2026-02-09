@@ -11,6 +11,15 @@ interface FolderInfo {
 const { public: { apiBase } } = useRuntimeConfig()
 
 const { data: folders } = await useFetch<FolderInfo[]>(`${apiBase}/resources/folders`)
+
+const search = ref('')
+
+const filteredFolders = computed(() => {
+  if (!folders.value) return []
+  if (!search.value) return folders.value
+  const q = search.value.toLowerCase()
+  return folders.value.filter(f => f.folder.toLowerCase().includes(q))
+})
 </script>
 
 <template>
@@ -21,13 +30,15 @@ const { data: folders } = await useFetch<FolderInfo[]>(`${apiBase}/resources/fol
       ]"
     />
 
-    <div v-if="!folders || folders.length === 0" class="text-center text-gray-500 py-12">
+    <UInput v-model="search" placeholder="Filter folders..." icon="i-lucide-search" class="max-w-sm" />
+
+    <div v-if="filteredFolders.length === 0" class="text-center text-gray-500 py-12">
       No folders found.
     </div>
 
     <div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
       <UCard
-        v-for="item in folders"
+        v-for="item in filteredFolders"
         :key="item.folder"
         class="cursor-pointer hover:ring-2 hover:ring-primary-500 transition"
         @click="navigateTo(`/folders/viewer?folder=${encodeURIComponent(item.folder)}`)"
