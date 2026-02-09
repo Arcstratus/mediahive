@@ -6,7 +6,9 @@ from sqlalchemy import asc, desc, func, or_, select, type_coerce
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.types import String
 
-from app.config import IMAGE_EXTENSIONS, MEDIA_DIR, VIDEO_EXTENSIONS
+import shutil
+
+from app.config import IMAGE_EXTENSIONS, MEDIA_DIR, TRASH_DIR, VIDEO_EXTENSIONS
 from app.database import get_db
 from app.models import Resource, Tag, resource_tags
 from app.schemas import (
@@ -139,6 +141,11 @@ async def delete_resource(resource_id: int, db: AsyncSession = Depends(get_db)):
     resource = await db.get(Resource, resource_id)
     if not resource:
         raise HTTPException(status_code=404, detail="Resource not found")
+    if resource.url and resource.type in ("image", "video"):
+        src = MEDIA_DIR / resource.url
+        if src.is_file():
+            TRASH_DIR.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(src), str(TRASH_DIR / resource.url))
     await db.delete(resource)
     await db.commit()
 
