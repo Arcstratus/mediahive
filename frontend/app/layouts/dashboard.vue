@@ -6,9 +6,9 @@ const items = [
     to: '/'
   },
   {
-    label: 'Library',
+    label: 'Resources',
     icon: 'i-lucide-library',
-    to: '/library'
+    to: '/resources'
   },
   {
     label: 'Upload',
