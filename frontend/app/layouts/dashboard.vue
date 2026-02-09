@@ -11,6 +11,11 @@ const items = [
     to: '/resources'
   },
   {
+    label: 'Tags',
+    icon: 'i-lucide-tag',
+    to: '/tags'
+  },
+  {
     label: 'Upload',
     icon: 'i-lucide-upload',
     to: '/upload'

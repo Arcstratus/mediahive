@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
 from app.database import lifespan
-from app.routers import health, resources
+from app.routers import health, resources, tags
 
 app = FastAPI(title="MediaHive", version="0.1.0", lifespan=lifespan)
 
@@ -17,6 +17,7 @@ app.add_middleware(
 
 app.include_router(health.router, prefix="/api")
 app.include_router(resources.router, prefix="/api")
+app.include_router(tags.router, prefix="/api")
 
 
 @app.get("/")

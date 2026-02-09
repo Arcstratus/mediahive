@@ -10,15 +10,30 @@ class ResourceType(str, Enum):
     video = "video"
 
 
+class TagCreate(BaseModel):
+    name: str
+
+
+class TagResponse(BaseModel):
+    id: int
+    name: str
+    created_at: datetime
+    resource_count: int = 0
+
+    model_config = {"from_attributes": True}
+
+
 class ResourceCreate(BaseModel):
     type: ResourceType
     url: str | None = None
     title: str | None = None
+    tags: list[str] = []
 
 
 class ResourceUpdate(BaseModel):
     url: str | None = None
     title: str | None = None
+    tags: list[str] | None = None
 
 
 class ResourceResponse(BaseModel):
@@ -27,6 +42,7 @@ class ResourceResponse(BaseModel):
     url: str | None
     title: str | None
     created_at: datetime
+    tags: list[TagResponse] = []
 
     model_config = {"from_attributes": True}
 

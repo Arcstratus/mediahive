@@ -5,11 +5,18 @@ definePageMeta({
   layout: 'dashboard'
 })
 
+interface Tag {
+  id: number
+  name: string
+  created_at: string
+}
+
 interface Resource {
   id: number
   type: string
   url: string | null
   title: string | null
+  tags: Tag[]
   created_at: string
 }
 
@@ -22,8 +29,23 @@ interface PaginatedResponse {
 
 const { public: { apiBase } } = useRuntimeConfig()
 
-const { data, refresh } = await useAsyncData<PaginatedResponse>('url-resources', () =>
-  $fetch(`${apiBase}/resources`, { query: { per_page: 100 } })
+const filterTag = ref<string>('')
+
+const { data: allTags, refresh: refreshTags } = await useAsyncData<Tag[]>('tags', () =>
+  $fetch(`${apiBase}/tags`)
+)
+
+const tagFilterOptions = computed(() => [
+  { label: 'All', value: '' },
+  ...(allTags.value ?? []).map(t => ({ label: t.name, value: t.name }))
+])
+
+const { data, refresh } = await useAsyncData<PaginatedResponse>(
+  'url-resources',
+  () => $fetch(`${apiBase}/resources`, {
+    query: { per_page: 100, ...(filterTag.value ? { tag: filterTag.value } : {}) }
+  }),
+  { watch: [filterTag] }
 )
 
 const resources = computed(() =>
@@ -33,6 +55,7 @@ const resources = computed(() =>
 const columns: TableColumn<Resource>[] = [
   { accessorKey: 'title', header: 'Title' },
   { accessorKey: 'url', header: 'URL' },
+  { id: 'tags', header: 'Tags' },
   { accessorKey: 'created_at', header: 'Created At' },
   { id: 'actions', header: '' }
 ]
@@ -40,12 +63,13 @@ const columns: TableColumn<Resource>[] = [
 // Modal state
 const modalOpen = ref(false)
 const editingResource = ref<Resource | null>(null)
-const form = reactive({ title: '', url: '' })
+const form = reactive({ title: '', url: '', tags: [] as string[] })
 
 function openCreate() {
   editingResource.value = null
   form.title = ''
   form.url = ''
+  form.tags = []
   modalOpen.value = true
 }
 
@@ -53,6 +77,7 @@ function openEdit(resource: Resource) {
   editingResource.value = resource
   form.title = resource.title ?? ''
   form.url = resource.url ?? ''
+  form.tags = resource.tags.map(t => t.name)
   modalOpen.value = true
 }
 
@@ -60,21 +85,31 @@ async function submitForm() {
   if (editingResource.value) {
     await $fetch(`${apiBase}/resources/${editingResource.value.id}`, {
       method: 'PUT',
-      body: { title: form.title, url: form.url }
+      body: { title: form.title, url: form.url, tags: form.tags }
     })
   } else {
     await $fetch(`${apiBase}/resources`, {
       method: 'POST',
-      body: { type: 'url', title: form.title, url: form.url }
+      body: { type: 'url', title: form.title, url: form.url, tags: form.tags }
     })
   }
   modalOpen.value = false
   await refresh()
+  await refreshTags()
 }
 
 async function deleteResource(id: number) {
   if (!confirm('Are you sure you want to delete this resource?')) return
   await $fetch(`${apiBase}/resources/${id}`, { method: 'DELETE' })
+  await refresh()
+}
+
+async function removeTag(resource: Resource, tagName: string) {
+  const updatedTags = resource.tags.filter(t => t.name !== tagName).map(t => t.name)
+  await $fetch(`${apiBase}/resources/${resource.id}`, {
+    method: 'PUT',
+    body: { tags: updatedTags }
+  })
   await refresh()
 }
 
@@ -90,6 +125,16 @@ function formatDate(dateStr: string) {
       <UButton label="Add URL" icon="i-lucide-plus" @click="openCreate" />
     </div>
 
+    <div class="flex items-center gap-2">
+      <USelectMenu
+        v-model="filterTag"
+        :items="tagFilterOptions"
+        value-key="value"
+        placeholder="Filter by tag"
+        class="w-48"
+      />
+    </div>
+
     <UTable :data="resources" :columns="columns">
       <template #url-cell="{ row }">
         <a
@@ -100,6 +145,21 @@ function formatDate(dateStr: string) {
         >
           {{ row.original.url }}
         </a>
+      </template>
+
+      <template #tags-cell="{ row }">
+        <div class="flex gap-1 flex-wrap">
+          <UBadge
+            v-for="tag in row.original.tags"
+            :key="tag.id"
+            :label="tag.name"
+            variant="subtle"
+            size="sm"
+            trailing-icon="i-lucide-x"
+            class="cursor-pointer"
+            @click="removeTag(row.original, tag.name)"
+          />
+        </div>
       </template>
 
       <template #created_at-cell="{ row }">
@@ -134,6 +194,9 @@ function formatDate(dateStr: string) {
           </UFormField>
           <UFormField label="URL" name="url">
             <UInput v-model="form.url" placeholder="https://example.com" class="w-full" />
+          </UFormField>
+          <UFormField label="Tags" name="tags">
+            <UInputTags v-model="form.tags" placeholder="Add tags..." :add-on-blur="true" class="w-full" />
           </UFormField>
         </div>
       </template>
