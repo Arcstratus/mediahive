@@ -1,7 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
+import hashlib
+from pathlib import Path
 
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
+from sqlalchemy import asc, desc, func, or_, select, type_coerce
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.types import String
+
+from app.config import IMAGE_EXTENSIONS, MEDIA_DIR, VIDEO_EXTENSIONS
 from app.database import get_db
 from app.models import Resource, Tag, resource_tags
 from app.schemas import (
@@ -38,12 +43,28 @@ async def create_resource(body: ResourceCreate, db: AsyncSession = Depends(get_d
     return resource
 
 
+_ext_expr = type_coerce(
+    func.substr(Resource.url, func.instr(Resource.url, ".")), String
+)
+
+SORTABLE_COLUMNS = {
+    "title": Resource.title,
+    "url": Resource.url,
+    "ext": _ext_expr,
+    "created_at": Resource.created_at,
+}
+
+
 @router.get("/resources", response_model=PaginatedResponse)
 async def list_resources(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     type: str | None = Query(None),
-    tag: str | None = Query(None),
+    search: str | None = Query(None),
+    ext: list[str] = Query(None),
+    tag: list[str] = Query(None),
+    sort_by: str = Query("created_at"),
+    sort_desc: bool = Query(True),
     db: AsyncSession = Depends(get_db),
 ):
     offset = (page - 1) * per_page
@@ -55,14 +76,34 @@ async def list_resources(
         base_query = base_query.where(Resource.type == type)
         count_query = count_query.where(Resource.type == type)
 
+    if search:
+        condition = or_(
+            Resource.title.icontains(search),
+            Resource.url.icontains(search),
+        )
+        base_query = base_query.where(condition)
+        count_query = count_query.where(condition)
+
+    if ext:
+        ext_cond = or_(*[Resource.url.endswith(e) for e in ext])
+        base_query = base_query.where(ext_cond)
+        count_query = count_query.where(ext_cond)
+
     if tag:
-        base_query = base_query.join(resource_tags).join(Tag).where(Tag.name == tag)
-        count_query = count_query.join(resource_tags).join(Tag).where(Tag.name == tag)
+        for t in tag:
+            tag_subq = (
+                select(resource_tags.c.resource_id)
+                .join(Tag)
+                .where(Tag.name.icontains(t))
+            )
+            base_query = base_query.where(Resource.id.in_(tag_subq))
+            count_query = count_query.where(Resource.id.in_(tag_subq))
+
+    col = SORTABLE_COLUMNS.get(sort_by, Resource.created_at)
+    order = desc(col) if sort_desc else asc(col)
 
     total = await db.scalar(count_query)
-    result = await db.execute(
-        base_query.order_by(Resource.created_at.desc()).offset(offset).limit(per_page)
-    )
+    result = await db.execute(base_query.order_by(order).offset(offset).limit(per_page))
     items = result.scalars().unique().all()
     return PaginatedResponse(items=items, total=total, page=page, per_page=per_page)
 
@@ -100,3 +141,43 @@ async def delete_resource(resource_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Resource not found")
     await db.delete(resource)
     await db.commit()
+
+
+@router.post("/resources/upload", response_model=ResourceResponse, status_code=201)
+async def upload_resource(
+    file: UploadFile,
+    title: str | None = None,
+    tags: str | None = None,
+    db: AsyncSession = Depends(get_db),
+):
+    content = await file.read()
+    sha256 = hashlib.sha256(content).hexdigest()
+    ext = Path(file.filename or "").suffix.lower()
+    new_name = f"{sha256}{ext}"
+
+    MEDIA_DIR.mkdir(parents=True, exist_ok=True)
+    dest = MEDIA_DIR / new_name
+    if not dest.exists():
+        with open(dest, "wb") as f:
+            f.write(content)
+
+    resource_type = "image"
+    if ext in VIDEO_EXTENSIONS:
+        resource_type = "video"
+    elif ext not in IMAGE_EXTENSIONS:
+        raise HTTPException(
+            status_code=400, detail=f"Unsupported file extension: {ext}"
+        )
+
+    resource = Resource(
+        type=resource_type,
+        title=title or file.filename,
+        url=new_name,
+    )
+    if tags:
+        tag_names = [t.strip() for t in tags.split(",") if t.strip()]
+        resource.tags = await _resolve_tags(db, tag_names)
+    db.add(resource)
+    await db.commit()
+    await db.refresh(resource)
+    return resource

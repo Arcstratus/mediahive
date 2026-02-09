@@ -16,11 +16,6 @@ const items = [
     to: '/tags'
   },
   {
-    label: 'Upload',
-    icon: 'i-lucide-upload',
-    to: '/upload'
-  },
-  {
     label: 'Settings',
     icon: 'i-lucide-settings',
     to: '/settings'

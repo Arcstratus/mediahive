@@ -31,42 +31,65 @@ const { public: { apiBase } } = useRuntimeConfig()
 
 const page = ref(1)
 const perPage = 20
-const filterTag = ref<string>('')
+const filterSearch = ref('')
+const filterTags = ref<string[]>([])
+const sorting = ref<{ id: string, desc: boolean }[]>([])
 
 const { data: allTags, refresh: refreshTags } = await useAsyncData<Tag[]>('tags', () =>
   $fetch(`${apiBase}/tags`)
 )
 
-const tagFilterOptions = computed(() => [
-  { label: 'All', value: '' },
-  ...(allTags.value ?? []).map(t => ({ label: t.name, value: t.name }))
-])
+const tagFilterOptions = computed(() =>
+  (allTags.value ?? []).map(t => ({ label: t.name, value: t.name }))
+)
 
 const { data, refresh } = await useAsyncData<PaginatedResponse>(
   'url-resources',
-  () => $fetch(`${apiBase}/resources`, {
-    query: {
+  () => {
+    const query: Record<string, unknown> = {
       type: 'url',
       page: page.value,
-      per_page: perPage,
-      ...(filterTag.value ? { tag: filterTag.value } : {})
+      per_page: perPage
     }
-  }),
-  { watch: [filterTag, page] }
+    if (filterSearch.value) query.search = filterSearch.value
+    if (filterTags.value.length) query.tag = filterTags.value
+    if (sorting.value.length) {
+      query.sort_by = sorting.value[0].id
+      query.sort_desc = sorting.value[0].desc
+    }
+    return $fetch(`${apiBase}/resources`, { query })
+  },
+  { watch: [filterSearch, filterTags, page, sorting] }
 )
 
 const resources = computed(() => data.value?.items ?? [])
 const total = computed(() => data.value?.total ?? 0)
 
-watch(filterTag, () => {
+watch([filterSearch, filterTags], () => {
   page.value = 1
 })
 
+function sortHeader(label: string) {
+  return ({ column }: { column: { getIsSorted: () => false | 'asc' | 'desc', toggleSorting: (asc: boolean) => void } }) => {
+    const isSorted = column.getIsSorted()
+    return h(resolveComponent('UButton'), {
+      color: 'neutral',
+      variant: 'ghost',
+      label,
+      icon: isSorted
+        ? (isSorted === 'asc' ? 'i-lucide-arrow-up-narrow-wide' : 'i-lucide-arrow-down-wide-narrow')
+        : 'i-lucide-arrow-up-down',
+      class: '-mx-2.5',
+      onClick: () => column.toggleSorting(column.getIsSorted() === 'asc')
+    })
+  }
+}
+
 const columns: TableColumn<Resource>[] = [
-  { accessorKey: 'title', header: 'Title' },
-  { accessorKey: 'url', header: 'URL' },
+  { accessorKey: 'title', header: sortHeader('Title') },
+  { accessorKey: 'url', header: sortHeader('URL') },
   { id: 'tags', header: 'Tags' },
-  { accessorKey: 'created_at', header: 'Created At' },
+  { accessorKey: 'created_at', header: sortHeader('Created At') },
   { id: 'actions', header: '' }
 ]
 
@@ -131,22 +154,36 @@ function formatDate(dateStr: string) {
 
 <template>
   <div class="flex flex-col gap-6">
+    <UBreadcrumb
+      :items="[
+        { label: 'Resources', to: '/resources' },
+        { label: 'URLs' }
+      ]"
+    />
+
     <div class="flex items-center justify-between">
       <h1 class="text-2xl font-bold">URL Resources</h1>
       <UButton label="Add URL" icon="i-lucide-plus" @click="openCreate" />
     </div>
 
     <div class="flex items-center gap-2">
+      <UInput
+        v-model="filterSearch"
+        placeholder="Search title or URL..."
+        icon="i-lucide-search"
+        class="w-64"
+      />
       <USelectMenu
-        v-model="filterTag"
+        v-model="filterTags"
         :items="tagFilterOptions"
         value-key="value"
-        placeholder="Filter by tag"
-        class="w-48"
+        placeholder="Filter by tags"
+        multiple
+        class="w-64"
       />
     </div>
 
-    <UTable :data="resources" :columns="columns">
+    <UTable v-model:sorting="sorting" :data="resources" :columns="columns" :sorting-options="{ manualSorting: true }">
       <template #url-cell="{ row }">
         <a
           v-if="row.original.url"

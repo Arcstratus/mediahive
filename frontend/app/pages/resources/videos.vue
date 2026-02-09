@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { TableColumn } from '@nuxt/ui'
+
 definePageMeta({
   layout: 'dashboard'
 })
@@ -25,21 +27,85 @@ interface PaginatedResponse {
   per_page: number
 }
 
+const VIDEO_EXTENSIONS = ['.mp4', '.mkv', '.avi', '.mov', '.wmv', '.flv', '.webm', '.m4v', '.ts']
+
 const { public: { apiBase } } = useRuntimeConfig()
 
 const page = ref(1)
 const perPage = 20
+const filterSearch = ref('')
+const filterTags = ref<string[]>([])
+const filterExt = ref<string[]>([])
+const sorting = ref<{ id: string, desc: boolean }[]>([])
+
+const extOptions = computed(() =>
+  VIDEO_EXTENSIONS.map(e => ({ label: e, value: e }))
+)
+
+const { data: allTags, refresh: refreshTags } = await useAsyncData<Tag[]>('video-tags', () =>
+  $fetch(`${apiBase}/tags`)
+)
+
+const tagFilterOptions = computed(() =>
+  (allTags.value ?? []).map(t => ({ label: t.name, value: t.name }))
+)
 
 const { data, refresh } = await useAsyncData<PaginatedResponse>(
   'video-resources',
-  () => $fetch(`${apiBase}/resources`, {
-    query: { type: 'video', page: page.value, per_page: perPage }
-  }),
-  { watch: [page] }
+  () => {
+    const query: Record<string, unknown> = {
+      type: 'video',
+      page: page.value,
+      per_page: perPage
+    }
+    if (filterSearch.value) query.search = filterSearch.value
+    if (filterTags.value.length) query.tag = filterTags.value
+    if (filterExt.value.length) query.ext = filterExt.value
+    if (sorting.value.length) {
+      query.sort_by = sorting.value[0].id
+      query.sort_desc = sorting.value[0].desc
+    }
+    return $fetch(`${apiBase}/resources`, { query })
+  },
+  { watch: [filterSearch, filterTags, filterExt, page, sorting] }
 )
 
 const resources = computed(() => data.value?.items ?? [])
 const total = computed(() => data.value?.total ?? 0)
+
+watch([filterSearch, filterTags, filterExt], () => {
+  page.value = 1
+})
+
+function getExtension(url: string | null): string {
+  if (!url) return ''
+  const dot = url.lastIndexOf('.')
+  return dot >= 0 ? url.slice(dot) : ''
+}
+
+function sortHeader(label: string) {
+  return ({ column }: { column: { getIsSorted: () => false | 'asc' | 'desc', toggleSorting: (asc: boolean) => void } }) => {
+    const isSorted = column.getIsSorted()
+    return h(resolveComponent('UButton'), {
+      color: 'neutral',
+      variant: 'ghost',
+      label,
+      icon: isSorted
+        ? (isSorted === 'asc' ? 'i-lucide-arrow-up-narrow-wide' : 'i-lucide-arrow-down-wide-narrow')
+        : 'i-lucide-arrow-up-down',
+      class: '-mx-2.5',
+      onClick: () => column.toggleSorting(column.getIsSorted() === 'asc')
+    })
+  }
+}
+
+const columns: TableColumn<Resource>[] = [
+  { accessorKey: 'title', header: sortHeader('Title') },
+  { id: 'ext', accessorFn: row => getExtension(row.url), header: sortHeader('Extension') },
+  { id: 'tags', header: 'Tags' },
+  { accessorKey: 'created_at', header: sortHeader('Created At') },
+  { id: 'actions', header: '' }
+]
 
 // Edit modal
 const modalOpen = ref(false)
@@ -61,6 +127,7 @@ async function submitForm() {
   })
   modalOpen.value = false
   await refresh()
+  await refreshTags()
 }
 
 async function deleteResource(id: number) {
@@ -68,65 +135,149 @@ async function deleteResource(id: number) {
   await $fetch(`${apiBase}/resources/${id}`, { method: 'DELETE' })
   await refresh()
 }
+
+async function removeTag(resource: Resource, tagName: string) {
+  const updatedTags = resource.tags.filter(t => t.name !== tagName).map(t => t.name)
+  await $fetch(`${apiBase}/resources/${resource.id}`, {
+    method: 'PUT',
+    body: { tags: updatedTags }
+  })
+  await refresh()
+}
+
+function formatDate(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString()
+}
+
+// Upload modal
+const uploadOpen = ref(false)
+const uploadFile = ref<File | null>(null)
+const uploadForm = reactive({ title: '', tags: [] as string[] })
+const uploading = ref(false)
+
+function openUpload() {
+  uploadFile.value = null
+  uploadForm.title = ''
+  uploadForm.tags = []
+  uploading.value = false
+  uploadOpen.value = true
+}
+
+function onFileChange(e: Event) {
+  const input = e.target as HTMLInputElement
+  uploadFile.value = input.files?.[0] ?? null
+}
+
+async function submitUpload() {
+  if (!uploadFile.value) return
+  uploading.value = true
+  try {
+    const formData = new FormData()
+    formData.append('file', uploadFile.value)
+    if (uploadForm.title) formData.append('title', uploadForm.title)
+    if (uploadForm.tags.length) formData.append('tags', uploadForm.tags.join(','))
+    await $fetch(`${apiBase}/resources/upload`, {
+      method: 'POST',
+      body: formData
+    })
+    uploadOpen.value = false
+    await refresh()
+    await refreshTags()
+  }
+  finally {
+    uploading.value = false
+  }
+}
 </script>
 
 <template>
   <div class="flex flex-col gap-6">
-    <h1 class="text-2xl font-bold">Video Resources</h1>
+    <UBreadcrumb
+      :items="[
+        { label: 'Resources', to: '/resources' },
+        { label: 'Videos' }
+      ]"
+    />
 
-    <div v-if="resources.length === 0" class="text-muted">
-      No videos yet.
+    <div class="flex items-center justify-between">
+      <h1 class="text-2xl font-bold">Video Resources</h1>
+      <UButton label="Add Video" icon="i-lucide-plus" @click="openUpload" />
     </div>
 
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      <UCard v-for="r in resources" :key="r.id" class="overflow-hidden">
-        <template #header>
-          <div class="aspect-video bg-muted overflow-hidden">
-            <video
-              :src="`${apiBase}/media/${r.url}`"
-              class="w-full h-full object-cover"
-              preload="metadata"
-              muted
-            />
-          </div>
-        </template>
-        <div class="flex flex-col gap-1">
-          <div class="flex items-center justify-between gap-2">
-            <p class="text-sm truncate" :title="r.title ?? r.url ?? ''">{{ r.title ?? r.url }}</p>
-            <div class="flex gap-1 shrink-0">
-              <UButton
-                icon="i-lucide-pencil"
-                variant="ghost"
-                color="neutral"
-                size="xs"
-                @click="openEdit(r)"
-              />
-              <UButton
-                icon="i-lucide-trash-2"
-                variant="ghost"
-                color="error"
-                size="xs"
-                @click="deleteResource(r.id)"
-              />
-            </div>
-          </div>
-          <div v-if="r.tags.length" class="flex gap-1 flex-wrap">
-            <UBadge
-              v-for="tag in r.tags"
-              :key="tag.id"
-              :label="tag.name"
-              variant="subtle"
-              size="sm"
-            />
-          </div>
+    <div class="flex items-center gap-2">
+      <UInput
+        v-model="filterSearch"
+        placeholder="Search title..."
+        icon="i-lucide-search"
+        class="w-64"
+      />
+      <USelectMenu
+        v-model="filterExt"
+        :items="extOptions"
+        value-key="value"
+        placeholder="Extension"
+        multiple
+        class="w-48"
+      />
+      <USelectMenu
+        v-model="filterTags"
+        :items="tagFilterOptions"
+        value-key="value"
+        placeholder="Filter by tags"
+        multiple
+        class="w-64"
+      />
+    </div>
+
+    <UTable v-model:sorting="sorting" :data="resources" :columns="columns" :sorting-options="{ manualSorting: true }">
+      <template #ext-cell="{ row }">
+        <UBadge :label="getExtension(row.original.url)" variant="subtle" size="sm" />
+      </template>
+
+      <template #tags-cell="{ row }">
+        <div class="flex gap-1 flex-wrap">
+          <UBadge
+            v-for="tag in row.original.tags"
+            :key="tag.id"
+            :label="tag.name"
+            variant="subtle"
+            size="sm"
+            trailing-icon="i-lucide-x"
+            class="cursor-pointer"
+            @click="removeTag(row.original, tag.name)"
+          />
         </div>
-      </UCard>
-    </div>
+      </template>
+
+      <template #created_at-cell="{ row }">
+        {{ formatDate(row.original.created_at) }}
+      </template>
+
+      <template #actions-cell="{ row }">
+        <div class="flex gap-1 justify-end">
+          <UButton
+            icon="i-lucide-pencil"
+            variant="ghost"
+            color="neutral"
+            size="xs"
+            @click="openEdit(row.original)"
+          />
+          <UButton
+            icon="i-lucide-trash-2"
+            variant="ghost"
+            color="error"
+            size="xs"
+            @click="deleteResource(row.original.id)"
+          />
+        </div>
+      </template>
+    </UTable>
 
     <div v-if="total > perPage" class="flex justify-center">
       <UPagination v-model:page="page" :total="total" :items-per-page="perPage" />
     </div>
 
+    <!-- Edit modal -->
     <UModal v-model:open="modalOpen" title="Edit Video">
       <template #body>
         <div class="flex flex-col gap-4">
@@ -142,6 +293,29 @@ async function deleteResource(id: number) {
         <div class="flex justify-end gap-2">
           <UButton label="Cancel" variant="outline" color="neutral" @click="close" />
           <UButton label="Update" @click="submitForm" />
+        </div>
+      </template>
+    </UModal>
+
+    <!-- Upload modal -->
+    <UModal v-model:open="uploadOpen" title="Upload Video">
+      <template #body>
+        <div class="flex flex-col gap-4">
+          <UFormField label="File" name="file">
+            <input type="file" accept="video/*" @change="onFileChange">
+          </UFormField>
+          <UFormField label="Title" name="title">
+            <UInput v-model="uploadForm.title" placeholder="Video title (optional)" class="w-full" />
+          </UFormField>
+          <UFormField label="Tags" name="tags">
+            <UInputTags v-model="uploadForm.tags" placeholder="Add tags..." :add-on-blur="true" class="w-full" />
+          </UFormField>
+        </div>
+      </template>
+      <template #footer="{ close }">
+        <div class="flex justify-end gap-2">
+          <UButton label="Cancel" variant="outline" color="neutral" @click="close" />
+          <UButton label="Upload" :loading="uploading" :disabled="!uploadFile" @click="submitUpload" />
         </div>
       </template>
     </UModal>
