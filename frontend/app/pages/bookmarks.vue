@@ -151,6 +151,7 @@ const treeItems = computed<TreeItem[]>(() => [{
 // Modal state
 const modalOpen = ref(false)
 const editingBookmark = ref<Bookmark | null>(null)
+const importOpen = ref(false)
 
 function openCreate() {
   editingBookmark.value = null
@@ -162,7 +163,7 @@ function openEdit(bookmark: Bookmark) {
   modalOpen.value = true
 }
 
-async function onBookmarkSaved() {
+async function onRefreshAll() {
   await refresh()
   await refreshTags()
 }
@@ -177,30 +178,6 @@ async function removeTag(bookmark: Bookmark, tagName: string) {
   const updatedTags = bookmark.tags.filter(t => t.name !== tagName).map(t => t.name)
   await bookmarksApi.update(bookmark.id, { tags: updatedTags })
   await refresh()
-}
-
-// Import bookmarks
-const importOpen = ref(false)
-const importText = ref('')
-const importFolder = ref('')
-const importing = ref(false)
-
-async function importBookmarks() {
-  const urls = importText.value.split('\n').map(u => u.trim()).filter(Boolean)
-  if (urls.length === 0) return
-  importing.value = true
-  try {
-    for (const url of urls) {
-      await bookmarksApi.create({ title: url, url, folder: importFolder.value || null })
-    }
-    importText.value = ''
-    importFolder.value = ''
-    importOpen.value = false
-    await refresh()
-  }
-  finally {
-    importing.value = false
-  }
 }
 </script>
 
@@ -382,22 +359,7 @@ async function importBookmarks() {
       </ClientOnly>
     </template>
 
-    <BookmarkModal v-model:open="modalOpen" :bookmark="editingBookmark" @saved="onBookmarkSaved" />
-
-    <UModal v-model:open="importOpen" title="Import Bookmarks">
-      <template #body>
-        <div class="flex flex-col gap-4">
-          <p class="text-sm text-gray-500">Paste URLs, one per line.</p>
-          <UFormField label="Folder" name="importFolder">
-            <UInput v-model="importFolder" placeholder="e.g. tech/articles" class="w-full" />
-          </UFormField>
-          <UTextarea v-model="importText" placeholder="https://example.com&#10;https://another.com" :rows="8" autoresize class="w-full" />
-          <div class="flex justify-end gap-2">
-            <UButton label="Cancel" variant="ghost" color="neutral" @click="importOpen = false" />
-            <UButton label="Import" :loading="importing" :disabled="!importText.trim()" @click="importBookmarks" />
-          </div>
-        </div>
-      </template>
-    </UModal>
+    <BookmarkModal v-model:open="modalOpen" :bookmark="editingBookmark" @saved="onRefreshAll" />
+    <ImportBookmarksModal v-model:open="importOpen" @imported="onRefreshAll" />
   </div>
 </template>

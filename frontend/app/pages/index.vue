@@ -46,56 +46,13 @@ const tagCloud = computed(() => {
 
 const { public: { apiBase } } = useRuntimeConfig()
 
-// Upload modal
+// Modal states
 const uploadOpen = ref(false)
-const uploadFile = ref<File | null>(null)
-const uploadForm = reactive({ title: '', tags: [] as string[] })
-const uploading = ref(false)
-
-function openUpload() {
-  uploadFile.value = null
-  uploadForm.title = ''
-  uploadForm.tags = []
-  uploading.value = false
-  uploadOpen.value = true
-}
-
-function onFileChange(e: Event) {
-  const input = e.target as HTMLInputElement
-  uploadFile.value = input.files?.[0] ?? null
-}
-
-async function submitUpload() {
-  if (!uploadFile.value) return
-  uploading.value = true
-  try {
-    const formData = new FormData()
-    formData.append('file', uploadFile.value)
-    if (uploadForm.title) formData.append('title', uploadForm.title)
-    if (uploadForm.tags.length) formData.append('tags', uploadForm.tags.join(','))
-    await resourcesApi.upload(formData)
-    uploadOpen.value = false
-    await Promise.all([refreshStats(), refreshRecent(), refreshTags()])
-  }
-  finally {
-    uploading.value = false
-  }
-}
-
-// Bookmark modal
 const bookmarkOpen = ref(false)
-
-async function onBookmarkSaved() {
-  await Promise.all([refreshStats(), refreshRecent(), refreshTags()])
-}
-
-// Stream player modal
 const streamOpen = ref(false)
-
-// Import folder modal
 const importOpen = ref(false)
 
-async function onImported() {
+async function onRefreshAll() {
   await Promise.all([refreshStats(), refreshRecent(), refreshTags()])
 }
 </script>
@@ -176,7 +133,7 @@ async function onImported() {
               icon="i-lucide-upload"
               variant="soft"
               block
-              @click="openUpload()"
+              @click="uploadOpen = true"
             />
             <UButton
               label="Add Bookmark"
@@ -225,40 +182,9 @@ async function onImported() {
       </div>
     </UCard>
 
-    <!-- Upload Modal -->
-    <UModal v-model:open="uploadOpen" title="Upload File">
-      <template #body>
-        <div class="flex flex-col gap-4">
-          <UFormField label="File" name="file">
-            <input
-              type="file"
-              accept="image/*,video/*"
-              @change="onFileChange"
-            >
-          </UFormField>
-          <UFormField label="Title" name="title">
-            <UInput v-model="uploadForm.title" placeholder="Title (optional)" class="w-full" />
-          </UFormField>
-          <UFormField label="Tags" name="tags">
-            <UInputTags v-model="uploadForm.tags" placeholder="Add tags..." :add-on-blur="true" class="w-full" />
-          </UFormField>
-        </div>
-      </template>
-      <template #footer="{ close }">
-        <div class="flex justify-end gap-2">
-          <UButton label="Cancel" variant="outline" color="neutral" @click="close" />
-          <UButton label="Upload" :loading="uploading" :disabled="!uploadFile" @click="submitUpload" />
-        </div>
-      </template>
-    </UModal>
-
-    <!-- Bookmark Modal -->
-    <BookmarkModal v-model:open="bookmarkOpen" @saved="onBookmarkSaved" />
-
-    <!-- Stream Player Modal -->
+    <UploadModal v-model:open="uploadOpen" @uploaded="onRefreshAll" />
+    <BookmarkModal v-model:open="bookmarkOpen" @saved="onRefreshAll" />
     <M3u8PlayerModal v-model:open="streamOpen" />
-
-    <!-- Import Folder Modal -->
-    <ImportFolderModal v-model:open="importOpen" @imported="onImported" />
+    <ImportFolderModal v-model:open="importOpen" @imported="onRefreshAll" />
   </div>
 </template>

@@ -18,19 +18,6 @@ const columns: TableColumn<Tag>[] = [
 ]
 
 const modalOpen = ref(false)
-const newTagName = ref('')
-
-function openCreate() {
-  newTagName.value = ''
-  modalOpen.value = true
-}
-
-async function createTag() {
-  if (!newTagName.value.trim()) return
-  await tagsApi.create(newTagName.value.trim())
-  modalOpen.value = false
-  await refresh()
-}
 
 async function deleteTag(id: number) {
   if (!confirm('Are you sure you want to delete this tag?')) return
@@ -46,7 +33,7 @@ async function deleteTag(id: number) {
 
     <div class="flex items-center justify-between">
       <h1 class="text-2xl font-bold">Tags</h1>
-      <UButton label="Add Tag" icon="i-lucide-plus" @click="openCreate" />
+      <UButton label="Add Tag" icon="i-lucide-plus" @click="modalOpen = true" />
     </div>
 
     <UTable :data="tags ?? []" :columns="columns">
@@ -67,19 +54,6 @@ async function deleteTag(id: number) {
       </template>
     </UTable>
 
-    <UModal v-model:open="modalOpen" title="Add Tag">
-      <template #body>
-        <UFormField label="Name" name="name">
-          <UInput v-model="newTagName" placeholder="Tag name" class="w-full" @keyup.enter="createTag" />
-        </UFormField>
-      </template>
-
-      <template #footer="{ close }">
-        <div class="flex justify-end gap-2">
-          <UButton label="Cancel" variant="outline" color="neutral" @click="close" />
-          <UButton label="Create" @click="createTag" />
-        </div>
-      </template>
-    </UModal>
+    <CreateTagModal v-model:open="modalOpen" @created="refresh" />
   </div>
 </template>

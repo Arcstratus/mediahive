@@ -164,22 +164,10 @@ const treeItems = computed<TreeItem[]>(() => [{
 // Edit modal
 const modalOpen = ref(false)
 const editingResource = ref<Resource | null>(null)
-const form = reactive({ title: '', folder: '', tags: [] as string[] })
 
 function openEdit(resource: Resource) {
   editingResource.value = resource
-  form.title = resource.title ?? ''
-  form.folder = resource.folder ?? ''
-  form.tags = resource.tags.map(t => t.name)
   modalOpen.value = true
-}
-
-async function submitForm() {
-  if (!editingResource.value) return
-  await resourcesApi.update(editingResource.value.id, { title: form.title, folder: form.folder || null, tags: form.tags })
-  modalOpen.value = false
-  await refresh()
-  await refreshTags()
 }
 
 async function deleteResource(id: number) {
@@ -194,76 +182,13 @@ async function removeTag(resource: Resource, tagName: string) {
   await refresh()
 }
 
-// Upload modal
+// Modal states
 const uploadOpen = ref(false)
-const uploadFile = ref<File | null>(null)
-const uploadForm = reactive({ title: '', tags: [] as string[] })
-const uploading = ref(false)
-
-function openUpload() {
-  uploadFile.value = null
-  uploadForm.title = ''
-  uploadForm.tags = []
-  uploading.value = false
-  uploadOpen.value = true
-}
-
-function onFileChange(e: Event) {
-  const input = e.target as HTMLInputElement
-  uploadFile.value = input.files?.[0] ?? null
-}
-
-async function submitUpload() {
-  if (!uploadFile.value) return
-  uploading.value = true
-  try {
-    const formData = new FormData()
-    formData.append('file', uploadFile.value)
-    if (uploadForm.title) formData.append('title', uploadForm.title)
-    if (uploadForm.tags.length) formData.append('tags', uploadForm.tags.join(','))
-    await resourcesApi.upload(formData)
-    uploadOpen.value = false
-    await refresh()
-    await refreshTags()
-  }
-  finally {
-    uploading.value = false
-  }
-}
-
-// Download URL modal
 const downloadOpen = ref(false)
-const downloadUrl = ref('')
-const downloading = ref(false)
-
-function openDownload() {
-  downloadUrl.value = ''
-  downloading.value = false
-  downloadOpen.value = true
-}
-
-const toast = useToast()
-
-async function submitDownload() {
-  if (!downloadUrl.value) return
-  downloading.value = true
-  try {
-    await resourcesApi.download(downloadUrl.value)
-    downloadOpen.value = false
-    toast.add({ title: 'Download started', description: 'The file is being downloaded in the background.', color: 'info' })
-  }
-  finally {
-    downloading.value = false
-  }
-}
-
-// Stream player modal
 const streamOpen = ref(false)
-
-// Import folder modal
 const importOpen = ref(false)
 
-async function onImported() {
+async function onRefreshAll() {
   await refresh()
   await refreshTags()
 }
@@ -304,7 +229,7 @@ async function onImported() {
 
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-2">
-        <UButton label="Upload File" icon="i-lucide-upload" @click="openUpload" />
+        <UButton label="Upload File" icon="i-lucide-upload" @click="uploadOpen = true" />
         <UButton
           label="Import Folder"
           icon="i-lucide-folder-input"
@@ -315,7 +240,7 @@ async function onImported() {
           label="Download URL"
           icon="i-lucide-download"
           variant="soft"
-          @click="openDownload"
+          @click="downloadOpen = true"
         />
         <UButton
           label="Play Stream"
@@ -491,71 +416,10 @@ async function onImported() {
       </ClientOnly>
     </template>
 
-    <!-- Edit modal -->
-    <UModal v-model:open="modalOpen" title="Edit Resource">
-      <template #body>
-        <div class="flex flex-col gap-4">
-          <UFormField label="Title" name="title">
-            <UInput v-model="form.title" placeholder="Resource title" class="w-full" />
-          </UFormField>
-          <UFormField label="Folder" name="folder">
-            <UInput v-model="form.folder" placeholder="e.g. 2024/vacation" class="w-full" />
-          </UFormField>
-          <UFormField label="Tags" name="tags">
-            <UInputTags v-model="form.tags" placeholder="Add tags..." :add-on-blur="true" class="w-full" />
-          </UFormField>
-        </div>
-      </template>
-      <template #footer="{ close }">
-        <div class="flex justify-end gap-2">
-          <UButton label="Cancel" variant="outline" color="neutral" @click="close" />
-          <UButton label="Update" @click="submitForm" />
-        </div>
-      </template>
-    </UModal>
-
-    <!-- Upload modal -->
-    <UModal v-model:open="uploadOpen" title="Upload File">
-      <template #body>
-        <div class="flex flex-col gap-4">
-          <UFormField label="File" name="file">
-            <input type="file" accept="image/*,video/*" @change="onFileChange">
-          </UFormField>
-          <UFormField label="Title" name="title">
-            <UInput v-model="uploadForm.title" placeholder="Title (optional)" class="w-full" />
-          </UFormField>
-          <UFormField label="Tags" name="tags">
-            <UInputTags v-model="uploadForm.tags" placeholder="Add tags..." :add-on-blur="true" class="w-full" />
-          </UFormField>
-        </div>
-      </template>
-      <template #footer="{ close }">
-        <div class="flex justify-end gap-2">
-          <UButton label="Cancel" variant="outline" color="neutral" @click="close" />
-          <UButton label="Upload" :loading="uploading" :disabled="!uploadFile" @click="submitUpload" />
-        </div>
-      </template>
-    </UModal>
-
-    <!-- Download URL modal -->
-    <UModal v-model:open="downloadOpen" title="Download from URL">
-      <template #body>
-        <UFormField label="URL" name="url">
-          <UInput v-model="downloadUrl" placeholder="https://example.com/file.mp4" class="w-full" />
-        </UFormField>
-      </template>
-      <template #footer="{ close }">
-        <div class="flex justify-end gap-2">
-          <UButton label="Cancel" variant="outline" color="neutral" @click="close" />
-          <UButton label="Download" :loading="downloading" :disabled="!downloadUrl" @click="submitDownload" />
-        </div>
-      </template>
-    </UModal>
-
-    <!-- Stream Player Modal -->
+    <EditResourceModal v-model:open="modalOpen" :resource="editingResource" @saved="onRefreshAll" />
+    <UploadModal v-model:open="uploadOpen" @uploaded="onRefreshAll" />
+    <DownloadUrlModal v-model:open="downloadOpen" @downloaded="onRefreshAll" />
     <M3u8PlayerModal v-model:open="streamOpen" />
-
-    <!-- Import Folder Modal -->
-    <ImportFolderModal v-model:open="importOpen" @imported="onImported" />
+    <ImportFolderModal v-model:open="importOpen" @imported="onRefreshAll" />
   </div>
 </template>
