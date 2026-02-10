@@ -1,7 +1,7 @@
-from sqlalchemy import asc, desc, func, or_, select
-from sqlalchemy.ext.asyncio import AsyncSession
-
+from sqlalchemy import asc, delete, desc, func, or_, select
+from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.exceptions import BookmarkAlreadyExistsError, BookmarkNotFoundError
 from app.models import Bookmark, Tag, bookmark_tags
@@ -129,42 +129,34 @@ async def delete_bookmark(db: AsyncSession, bookmark_id: int) -> None:
 async def batch_create_bookmarks(
     db: AsyncSession, items: list[BookmarkCreate]
 ) -> list[Bookmark]:
-    existing_urls = set(
-        (
-            await db.scalars(
-                select(Bookmark.url).where(Bookmark.url.in_([b.url for b in items]))
-            )
-        ).all()
+    rows = list(
+        {
+            b.url: {
+                "title": b.title,
+                "url": b.url,
+                "description": b.description,
+                "folder": b.folder,
+            }
+            for b in items
+        }.values()
     )
-    seen_urls: set[str] = set()
-    bookmarks = []
-    for body in items:
-        if body.url in existing_urls or body.url in seen_urls:
-            continue
-        seen_urls.add(body.url)
-        bookmark = Bookmark(
-            title=body.title,
-            url=body.url,
-            description=body.description,
-            folder=body.folder,
-        )
-        if body.tags:
-            bookmark.tags = await tag_service.resolve_tags(db, body.tags)
-        db.add(bookmark)
-        bookmarks.append(bookmark)
+    if not rows:
+        return []
+
+    stmt = (
+        insert(Bookmark)
+        .values(rows)
+        .on_conflict_do_nothing(index_elements=["url"])
+        .returning(Bookmark)
+    )
+    result = await db.execute(stmt)
+    bookmarks = list(result.scalars().all())
     await db.commit()
-    for bm in bookmarks:
-        await db.refresh(bm)
     return bookmarks
 
 
-async def batch_delete_bookmarks(db: AsyncSession, ids: list[int]) -> int:
-    deleted = 0
-    for bookmark_id in ids:
-        bookmark = await db.get(Bookmark, bookmark_id)
-        if not bookmark:
-            continue
-        await db.delete(bookmark)
-        deleted += 1
+async def batch_delete_bookmarks(db: AsyncSession, ids: list[int]) -> None:
+    if not ids:
+        return
+    await db.execute(delete(Bookmark).where(Bookmark.id.in_(ids)))
     await db.commit()
-    return deleted
