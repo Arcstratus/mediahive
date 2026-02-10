@@ -14,12 +14,12 @@ from app.exceptions import (
     ResourceNotFoundError,
     ResourceValidationError,
 )
-from app.models import Resource
+from app.models import Resource, ResourceCategory
 from app.services.file_service import sha256_hash
 
 
 async def validate_resource(
-    db: AsyncSession, resource_id: int, category: str
+    db: AsyncSession, resource_id: int, category: ResourceCategory
 ) -> Resource:
     """Fetch a resource and validate it exists, is not deleted, matches category, and has a file."""
     resource = await db.get(Resource, resource_id)
@@ -45,7 +45,7 @@ async def finalize_conversion(
     ext: str,
     resource: Resource,
     db: AsyncSession,
-    category: str | None = None,
+    category: ResourceCategory | None = None,
 ) -> Resource:
     """
     Read the converted file, compute SHA256, rename/dedup, create a new Resource,
@@ -89,7 +89,7 @@ async def convert_image(
     converter_kwargs: dict | None = None,
 ) -> Resource:
     """Generic pipeline: validate -> build path -> temp file -> call converter -> finalize."""
-    resource = await validate_resource(db, resource_id, "image")
+    resource = await validate_resource(db, resource_id, ResourceCategory.image)
     source_path = build_source_path(resource)
 
     if ext is None:
@@ -109,7 +109,7 @@ async def convert_image(
 
 
 async def convert_to_mp4(db: AsyncSession, resource_id: int, crf: int = 23) -> Resource:
-    resource = await validate_resource(db, resource_id, "video")
+    resource = await validate_resource(db, resource_id, ResourceCategory.video)
     source_path = build_source_path(resource)
 
     if source_path.suffix.lower() == ".mp4":
@@ -129,4 +129,6 @@ async def convert_to_mp4(db: AsyncSession, resource_id: int, crf: int = 23) -> R
         temp_path.unlink(missing_ok=True)
         raise ConversionError("MP4 conversion failed")
 
-    return await finalize_conversion(temp_path, ext, resource, db, category="video")
+    return await finalize_conversion(
+        temp_path, ext, resource, db, category=ResourceCategory.video
+    )

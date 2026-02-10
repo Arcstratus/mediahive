@@ -10,18 +10,19 @@ from app.config import (
     TRASH_DIR,
     VIDEO_EXTENSIONS,
 )
+from app.models import ResourceCategory
 
 
 def sha256_hash(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest()
 
 
-def classify_extension(ext: str) -> str | None:
+def classify_extension(ext: str) -> ResourceCategory:
     if ext in IMAGE_EXTENSIONS:
-        return "image"
+        return ResourceCategory.image
     if ext in VIDEO_EXTENSIONS:
-        return "video"
-    return None
+        return ResourceCategory.video
+    return ResourceCategory.unknown
 
 
 async def generate_thumbnail(video_path: Path, sha_prefix: str) -> str | None:

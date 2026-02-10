@@ -17,7 +17,7 @@ from app.config import (
 from app.converters import remux_to_mp4
 from app.database import async_session
 from app.exceptions import ResourceNotFoundError, ResourceValidationError
-from app.models import Resource, Tag, resource_tags
+from app.models import Resource, ResourceCategory, Tag, resource_tags
 from app.schemas import (
     PaginatedResponse,
     ResourceCreate,
@@ -57,7 +57,7 @@ ALLOWED_EXTENSIONS = IMAGE_EXTENSIONS | VIDEO_EXTENSIONS | {".m3u8"}
 
 async def create_resource(db: AsyncSession, body: ResourceCreate) -> Resource:
     resource = Resource(
-        category=body.category.value, filename=body.filename, title=body.title
+        category=body.category, filename=body.filename, title=body.title
     )
     if body.tags:
         resource.tags = await resolve_tags(db, body.tags)
@@ -291,10 +291,12 @@ async def bg_download(url: str, ext: str) -> None:
                 f.write(content)
 
     filename = f"{sha}{ext}"
-    category = "video" if ext in VIDEO_EXTENSIONS else "image"
+    category = (
+        ResourceCategory.video if ext in VIDEO_EXTENSIONS else ResourceCategory.image
+    )
 
     thumbnail = None
-    if category == "video":
+    if category == ResourceCategory.video:
         thumbnail = await generate_thumbnail(MEDIA_DIR / filename, sha)
 
     async with async_session() as db:
@@ -332,14 +334,14 @@ async def upload_resource(
         with open(dest, "wb") as f:
             f.write(file_content)
 
-    category = "image"
+    category = ResourceCategory.image
     if ext in VIDEO_EXTENSIONS:
-        category = "video"
+        category = ResourceCategory.video
     elif ext not in IMAGE_EXTENSIONS:
         raise ResourceValidationError(f"Unsupported file extension: {ext}")
 
     thumbnail = None
-    if category == "video":
+    if category == ResourceCategory.video:
         thumbnail = await generate_thumbnail(dest, sha)
 
     resource = Resource(
@@ -368,7 +370,7 @@ async def set_thumbnail(
     resource = await db.get(Resource, resource_id)
     if not resource or resource.deleted_at is not None:
         raise ResourceNotFoundError("Resource not found")
-    if resource.category != "video":
+    if resource.category != ResourceCategory.video:
         raise ResourceValidationError("Resource is not a video")
     if not resource.filename:
         raise ResourceValidationError("Video file not found")

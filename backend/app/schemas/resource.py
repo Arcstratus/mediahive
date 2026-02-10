@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from .common import ResourceCategory
+from app.models import ResourceCategory
 from .tag import TagResponse
 
 

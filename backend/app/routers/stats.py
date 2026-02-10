@@ -4,7 +4,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import Bookmark, Resource, Tag
+from app.models import Bookmark, Resource, ResourceCategory, Tag
 from app.schemas import StatsResponse
 
 router = ErrorAwareRouter(tags=["Stats"])
@@ -21,8 +21,8 @@ async def get_stats(db: AsyncSession = Depends(get_db)):
     tag_count = await db.scalar(select(func.count(Tag.id)))
 
     return StatsResponse(
-        images=counts.get("image", 0),
-        videos=counts.get("video", 0),
+        images=counts.get(ResourceCategory.image, 0),
+        videos=counts.get(ResourceCategory.video, 0),
         bookmarks=bookmark_count or 0,
         tags=tag_count or 0,
     )

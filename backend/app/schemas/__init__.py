@@ -5,7 +5,9 @@ from .bookmark import (
     BookmarkUpdate,
     PaginatedBookmarkResponse,
 )
-from .common import BatchDeleteRequest, BatchDeleteResponse, ResourceCategory
+from .common import BatchDeleteRequest, BatchDeleteResponse
+
+from app.models import ResourceCategory
 from .import_ import (
     ImportFileItem,
     ImportRequest,

@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from .common import ResourceCategory
+from app.models import ResourceCategory
 
 
 class ScanRequest(BaseModel):

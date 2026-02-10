@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import MEDIA_DIR
 from app.exceptions import ImportPathError
 from app.models import Resource
+from app.models import ResourceCategory
 from app.schemas import ImportFileItem, ScannedFile
 from app.services.file_service import classify_extension, sha256_hash
 
@@ -25,7 +26,7 @@ def scan_folder(path: str) -> list[ScannedFile]:
         for fname in filenames:
             ext = Path(fname).suffix.lower()
             file_type = classify_extension(ext)
-            if file_type is None:
+            if file_type == ResourceCategory.unknown:
                 continue
             full_path = Path(dirpath) / fname
             files.append(
@@ -68,7 +69,7 @@ async def execute_import(
         if not dest.exists():
             shutil.copy2(src, dest)
 
-        resource = Resource(category=item.type.value, title=src.name, filename=new_name)
+        resource = Resource(category=item.type, title=src.name, filename=new_name)
         db.add(resource)
         imported += 1
 

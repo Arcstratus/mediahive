@@ -1,9 +1,17 @@
 from datetime import datetime
+from enum import Enum
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Table, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+
+
+class ResourceCategory(str, Enum):
+    image = "image"
+    video = "video"
+    unknown = "unknown"
+
 
 resource_tags = Table(
     "resource_tags",
@@ -41,7 +49,7 @@ class Resource(Base):
     __tablename__ = "resources"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    category: Mapped[str] = mapped_column(String, nullable=False)
+    category: Mapped[ResourceCategory] = mapped_column(String, nullable=False)
     filename: Mapped[str | None] = mapped_column(String, nullable=True, unique=True)
     title: Mapped[str | None] = mapped_column(String, nullable=True)
     folder: Mapped[str | None] = mapped_column(String, nullable=True)
