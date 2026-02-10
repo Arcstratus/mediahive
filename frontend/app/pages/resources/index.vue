@@ -185,7 +185,6 @@ async function removeTag(resource: Resource, tagName: string) {
 // Modal states
 const uploadOpen = ref(false)
 const downloadOpen = ref(false)
-const streamOpen = ref(false)
 const importOpen = ref(false)
 
 async function onRefreshAll() {
@@ -241,12 +240,6 @@ async function onRefreshAll() {
           icon="i-lucide-download"
           variant="soft"
           @click="downloadOpen = true"
-        />
-        <UButton
-          label="Play Stream"
-          icon="i-lucide-play"
-          variant="soft"
-          @click="streamOpen = true"
         />
         <UButton
           :label="selectedCount > 0 ? `Delete Selected (${selectedCount})` : 'Delete Selected'"
@@ -419,7 +412,6 @@ async function onRefreshAll() {
     <EditResourceModal v-model:open="modalOpen" :resource="editingResource" @saved="onRefreshAll" />
     <UploadModal v-model:open="uploadOpen" @uploaded="onRefreshAll" />
     <DownloadUrlModal v-model:open="downloadOpen" @downloaded="onRefreshAll" />
-    <M3u8PlayerModal v-model:open="streamOpen" />
     <ImportFolderModal v-model:open="importOpen" @imported="onRefreshAll" />
   </div>
 </template>

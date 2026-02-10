@@ -49,7 +49,6 @@ const { public: { apiBase } } = useRuntimeConfig()
 // Modal states
 const uploadOpen = ref(false)
 const bookmarkOpen = ref(false)
-const streamOpen = ref(false)
 const importOpen = ref(false)
 
 async function onRefreshAll() {
@@ -149,13 +148,6 @@ async function onRefreshAll() {
               block
               @click="importOpen = true"
             />
-            <UButton
-              label="Play Stream"
-              icon="i-lucide-play"
-              variant="soft"
-              block
-              @click="streamOpen = true"
-            />
           </div>
         </UCard>
       </div>
@@ -184,7 +176,6 @@ async function onRefreshAll() {
 
     <UploadModal v-model:open="uploadOpen" @uploaded="onRefreshAll" />
     <BookmarkModal v-model:open="bookmarkOpen" @saved="onRefreshAll" />
-    <M3u8PlayerModal v-model:open="streamOpen" />
     <ImportFolderModal v-model:open="importOpen" @imported="onRefreshAll" />
   </div>
 </template>
