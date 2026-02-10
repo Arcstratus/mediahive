@@ -7,7 +7,6 @@ from app.exceptions import BookmarkAlreadyExistsError, BookmarkNotFoundError
 from app.schemas import (
     BatchCreateBookmarkResponse,
     BatchDeleteRequest,
-    BatchDeleteResponse,
     BookmarkCreate,
     BookmarkResponse,
     BookmarkUpdate,
@@ -85,12 +84,11 @@ async def update_bookmark(
     return await bookmark_service.update_bookmark(db, bookmark_id, body)
 
 
-@router.delete("/bookmarks/batch", response_model=BatchDeleteResponse)
+@router.delete("/bookmarks/batch", status_code=204)
 async def batch_delete_bookmarks(
     body: BatchDeleteRequest, db: AsyncSession = Depends(get_db)
 ):
-    deleted = await bookmark_service.batch_delete_bookmarks(db, body.ids)
-    return BatchDeleteResponse(deleted=deleted)
+    await bookmark_service.batch_delete_bookmarks(db, body.ids)
 
 
 @router.delete(

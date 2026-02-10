@@ -1,9 +1,12 @@
+import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
+
+logger = logging.getLogger(__name__)
 
 DATABASE_URL = "sqlite+aiosqlite:///./db.sqlite3"
 
@@ -36,6 +39,6 @@ async def lifespan(app):
             try:
                 await conn.execute(text(stmt))
             except Exception:
-                pass
+                logger.debug("Migration skipped: %s", stmt)
     yield
     await engine.dispose()

@@ -245,8 +245,7 @@ async def test_batch_delete(client):
     resp = await client.request(
         "DELETE", "/api/bookmarks/batch", json={"ids": [b1["id"], b3["id"]]}
     )
-    assert resp.status_code == 200
-    assert resp.json()["deleted"] == 2
+    assert resp.status_code == 204
 
     listing = await client.get("/api/bookmarks")
     assert listing.json()["total"] == 1
@@ -259,9 +258,9 @@ async def test_batch_delete_skips_nonexistent(client):
     resp = await client.request(
         "DELETE", "/api/bookmarks/batch", json={"ids": [b1["id"], 999]}
     )
-    assert resp.json()["deleted"] == 1
+    assert resp.status_code == 204
 
 
 async def test_batch_delete_empty_list(client):
     resp = await client.request("DELETE", "/api/bookmarks/batch", json={"ids": []})
-    assert resp.json()["deleted"] == 0
+    assert resp.status_code == 204

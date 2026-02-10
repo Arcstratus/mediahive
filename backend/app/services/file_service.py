@@ -1,5 +1,6 @@
 import asyncio
 import hashlib
+import logging
 import shutil
 from pathlib import Path
 
@@ -11,6 +12,8 @@ from app.config import (
     VIDEO_EXTENSIONS,
 )
 from app.models import ResourceCategory
+
+logger = logging.getLogger(__name__)
 
 
 def sha256_hash(content: bytes) -> str:
@@ -50,7 +53,7 @@ async def generate_thumbnail(video_path: Path, sha_prefix: str) -> str | None:
         if proc.returncode == 0 and thumb_path.is_file():
             return thumb_filename
     except Exception:
-        pass
+        logger.exception("Thumbnail generation failed for %s", video_path)
     return None
 
 

@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urljoin
@@ -31,6 +32,8 @@ from app.services.file_service import (
     sha256_hash,
 )
 from app.services.tag_service import resolve_tags
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Module-level constants
@@ -264,50 +267,59 @@ async def download_m3u8(url: str) -> tuple[bytes, str]:
 
 
 async def bg_download(url: str, ext: str) -> None:
-    if ext == ".m3u8":
-        content, _ = await download_m3u8(url)
-    else:
-        content = await download_direct(url)
+    try:
+        if ext == ".m3u8":
+            content, _ = await download_m3u8(url)
+        else:
+            content = await download_direct(url)
 
-    sha = sha256_hash(content)
-    MEDIA_DIR.mkdir(parents=True, exist_ok=True)
+        sha = sha256_hash(content)
+        MEDIA_DIR.mkdir(parents=True, exist_ok=True)
 
-    if ext == ".m3u8":
-        tmp_ts = MEDIA_DIR / f"{sha}.ts.tmp"
-        with open(tmp_ts, "wb") as f:
-            f.write(content)
-        mp4_path = MEDIA_DIR / f"{sha}.mp4"
-        ok = await remux_to_mp4(tmp_ts, mp4_path)
-        tmp_ts.unlink(missing_ok=True)
-        if not ok:
-            return
-        ext = ".mp4"
-    else:
-        dest = MEDIA_DIR / f"{sha}{ext}"
-        if not dest.exists():
-            with open(dest, "wb") as f:
+        if ext == ".m3u8":
+            tmp_ts = MEDIA_DIR / f"{sha}.ts.tmp"
+            with open(tmp_ts, "wb") as f:
                 f.write(content)
+            mp4_path = MEDIA_DIR / f"{sha}.mp4"
+            ok = await remux_to_mp4(tmp_ts, mp4_path)
+            tmp_ts.unlink(missing_ok=True)
+            if not ok:
+                logger.error("Remux to MP4 failed for %s", url)
+                return
+            ext = ".mp4"
+        else:
+            dest = MEDIA_DIR / f"{sha}{ext}"
+            if not dest.exists():
+                with open(dest, "wb") as f:
+                    f.write(content)
 
-    filename = f"{sha}{ext}"
-    category = (
-        ResourceCategory.video if ext in VIDEO_EXTENSIONS else ResourceCategory.image
-    )
-
-    thumbnail = None
-    if category == ResourceCategory.video:
-        thumbnail = await generate_thumbnail(MEDIA_DIR / filename, sha)
-
-    async with async_session() as db:
-        existing = await db.scalar(
-            select(Resource).where(Resource.filename == filename)
+        filename = f"{sha}{ext}"
+        category = (
+            ResourceCategory.video
+            if ext in VIDEO_EXTENSIONS
+            else ResourceCategory.image
         )
-        if existing:
-            return
-        resource = Resource(
-            category=category, title=filename, filename=filename, thumbnail=thumbnail
-        )
-        db.add(resource)
-        await db.commit()
+
+        thumbnail = None
+        if category == ResourceCategory.video:
+            thumbnail = await generate_thumbnail(MEDIA_DIR / filename, sha)
+
+        async with async_session() as db:
+            existing = await db.scalar(
+                select(Resource).where(Resource.filename == filename)
+            )
+            if existing:
+                return
+            resource = Resource(
+                category=category,
+                title=filename,
+                filename=filename,
+                thumbnail=thumbnail,
+            )
+            db.add(resource)
+            await db.commit()
+    except Exception:
+        logger.exception("Background download failed for %s", url)
 
 
 # ---------------------------------------------------------------------------

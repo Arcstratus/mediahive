@@ -428,9 +428,7 @@ class TestBatchDelete:
             "/api/resources/batch-delete",
             json={"ids": [r1["id"], r2["id"]]},
         )
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["deleted"] == 2
+        assert resp.status_code == 204
 
         # r3 should still be accessible
         resp_get = await client.get(f"/api/resources/{r3['id']}")
@@ -453,14 +451,11 @@ class TestBatchDelete:
             "/api/resources/batch-delete",
             json={"ids": [r1["id"], 99999]},
         )
-        data = resp.json()
-        assert data["deleted"] == 0
+        assert resp.status_code == 204
 
     async def test_empty_list_returns_zero(self, client: httpx.AsyncClient):
         resp = await client.post("/api/resources/batch-delete", json={"ids": []})
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["deleted"] == 0
+        assert resp.status_code == 204
 
 
 # ---------------------------------------------------------------------------

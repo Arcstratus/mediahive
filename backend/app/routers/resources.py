@@ -16,7 +16,6 @@ from app.database import get_db
 from app.exceptions import ResourceNotFoundError, ResourceValidationError
 from app.schemas import (
     BatchDeleteRequest,
-    BatchDeleteResponse,
     PaginatedResponse,
     ResourceCreate,
     ResourceResponse,
@@ -87,12 +86,11 @@ async def list_resource_folders(db: AsyncSession = Depends(get_db)):
     return await resource_service.list_resource_folders(db)
 
 
-@router.post("/resources/batch-delete", response_model=BatchDeleteResponse)
+@router.post("/resources/batch-delete", status_code=204)
 async def batch_delete_resources(
     body: BatchDeleteRequest, db: AsyncSession = Depends(get_db)
 ):
-    deleted = await resource_service.batch_soft_delete(db, body.ids)
-    return BatchDeleteResponse(deleted=deleted)
+    await resource_service.batch_soft_delete(db, body.ids)
 
 
 @router.get(

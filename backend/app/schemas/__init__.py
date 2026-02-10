@@ -5,7 +5,7 @@ from .bookmark import (
     BookmarkUpdate,
     PaginatedBookmarkResponse,
 )
-from .common import BatchDeleteRequest, BatchDeleteResponse
+from .common import BatchDeleteRequest
 
 from app.models import ResourceCategory
 from .import_ import (
@@ -29,7 +29,6 @@ from .tag import TagCreate, TagResponse, TagUpdate
 __all__ = [
     "BatchCreateBookmarkResponse",
     "BatchDeleteRequest",
-    "BatchDeleteResponse",
     "BookmarkCreate",
     "BookmarkResponse",
     "BookmarkUpdate",
