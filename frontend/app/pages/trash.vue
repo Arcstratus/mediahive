@@ -14,11 +14,6 @@ const { data: items, refresh } = await useAsyncData<TrashItem[]>('trash', () =>
 
 const trashItems = computed(() => items.value ?? [])
 
-function formatDate(dateStr: string | null) {
-  if (!dateStr) return ''
-  return new Date(dateStr).toLocaleDateString()
-}
-
 async function restoreItem(id: number) {
   await $fetch(`${apiBase}/trash/${id}/restore`, { method: 'POST' })
   await refresh()

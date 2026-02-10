@@ -43,9 +43,6 @@ async function deleteTag(id: number) {
   await refresh()
 }
 
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString()
-}
 </script>
 
 <template>

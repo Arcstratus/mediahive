@@ -27,16 +27,10 @@ const fileColumns: TableColumn<ScannedFile>[] = [
   {
     accessorKey: 'size',
     header: 'Size',
-    cell: ({ row }) => formatSize(row.getValue('size') as number)
+    cell: ({ row }) => formatFileSize(row.getValue('size') as number)
   },
   { id: 'actions', header: '' }
 ]
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
 
 function removeFile(index: number) {
   scannedFiles.value.splice(index, 1)

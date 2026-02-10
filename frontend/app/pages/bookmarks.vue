@@ -190,10 +190,6 @@ async function removeTag(bookmark: Bookmark, tagName: string) {
   await refresh()
 }
 
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString()
-}
-
 // Import bookmarks
 const importOpen = ref(false)
 const importText = ref('')

@@ -51,10 +51,6 @@ const tagCloud = computed(() => {
   }))
 })
 
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString()
-}
-
 function getMediaUrl(resource: Resource): string {
   if (!resource.filename) return ''
   const folder = resource.folder ? `${resource.folder}/` : ''

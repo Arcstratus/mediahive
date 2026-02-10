@@ -59,12 +59,6 @@ watch([filterSearch, filterTags, filterExt], () => {
   page.value = 1
 })
 
-function getExtension(filename: string | null): string {
-  if (!filename) return ''
-  const dot = filename.lastIndexOf('.')
-  return dot >= 0 ? filename.slice(dot) : ''
-}
-
 function getMediaUrl(res: Resource): string {
   if (!res.filename) return ''
   return `${apiBase}/media/${res.folder ? res.folder + '/' : ''}${res.filename}`
@@ -221,10 +215,6 @@ async function removeTag(resource: Resource, tagName: string) {
     body: { tags: updatedTags }
   })
   await refresh()
-}
-
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString()
 }
 
 // Upload modal
