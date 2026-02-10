@@ -16,11 +16,7 @@ from app.config import (
 )
 from app.converters import remux_to_mp4
 from app.database import async_session
-from app.exceptions import (
-    ResourceNotFoundError,
-    ResourceValidationError,
-    TrashedResourceNotFoundError,
-)
+from app.exceptions import ResourceNotFoundError, ResourceValidationError
 from app.models import Resource, Tag, resource_tags
 from app.schemas import (
     PaginatedResponse,
@@ -32,8 +28,6 @@ from app.services.file_service import (
     generate_thumbnail,
     move_file,
     move_to_trash,
-    permanently_delete_from_trash,
-    restore_from_trash,
     sha256_hash,
 )
 from app.services.tag_service import resolve_tags
@@ -427,55 +421,3 @@ async def remove_thumbnail(db: AsyncSession, resource_id: int) -> Resource:
         await db.refresh(resource)
 
     return resource
-
-
-# ---------------------------------------------------------------------------
-# Trash operations
-# ---------------------------------------------------------------------------
-
-
-async def list_trash(db: AsyncSession) -> list[Resource]:
-    result = await db.execute(
-        select(Resource)
-        .where(Resource.deleted_at.isnot(None))
-        .order_by(Resource.deleted_at.desc())
-    )
-    return list(result.scalars().all())
-
-
-async def restore_resource(db: AsyncSession, resource_id: int) -> Resource:
-    resource = await db.get(Resource, resource_id)
-    if not resource or resource.deleted_at is None:
-        raise TrashedResourceNotFoundError("Trashed resource not found")
-
-    if resource.filename:
-        restore_from_trash(resource.filename, resource.folder)
-
-    resource.deleted_at = None
-    await db.commit()
-    await db.refresh(resource)
-    return resource
-
-
-async def permanently_delete(db: AsyncSession, resource_id: int) -> None:
-    resource = await db.get(Resource, resource_id)
-    if not resource or resource.deleted_at is None:
-        raise TrashedResourceNotFoundError("Trashed resource not found")
-
-    if resource.filename:
-        permanently_delete_from_trash(resource.filename)
-
-    await db.delete(resource)
-    await db.commit()
-
-
-async def empty_trash(db: AsyncSession) -> None:
-    result = await db.execute(select(Resource).where(Resource.deleted_at.isnot(None)))
-    resources = result.scalars().all()
-
-    for resource in resources:
-        if resource.filename:
-            permanently_delete_from_trash(resource.filename)
-        await db.delete(resource)
-
-    await db.commit()
