@@ -136,6 +136,9 @@ async function onBookmarkSaved() {
   await Promise.all([refreshStats(), refreshRecent(), refreshTags()])
 }
 
+// Stream player modal
+const streamOpen = ref(false)
+
 // Import folder modal
 const importOpen = ref(false)
 
@@ -230,6 +233,13 @@ async function onImported() {
               block
               @click="importOpen = true"
             />
+            <UButton
+              label="Play Stream"
+              icon="i-lucide-play"
+              variant="soft"
+              block
+              @click="streamOpen = true"
+            />
           </div>
         </UCard>
       </div>
@@ -285,6 +295,9 @@ async function onImported() {
 
     <!-- Bookmark Modal -->
     <BookmarkModal v-model:open="bookmarkOpen" @saved="onBookmarkSaved" />
+
+    <!-- Stream Player Modal -->
+    <M3u8PlayerModal v-model:open="streamOpen" />
 
     <!-- Import Folder Modal -->
     <ImportFolderModal v-model:open="importOpen" @imported="onImported" />

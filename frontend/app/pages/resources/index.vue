@@ -312,6 +312,9 @@ async function submitDownload() {
   }
 }
 
+// Stream player modal
+const streamOpen = ref(false)
+
 // Import folder modal
 const importOpen = ref(false)
 
@@ -368,6 +371,12 @@ async function onImported() {
           icon="i-lucide-download"
           variant="soft"
           @click="openDownload"
+        />
+        <UButton
+          label="Play Stream"
+          icon="i-lucide-play"
+          variant="soft"
+          @click="streamOpen = true"
         />
         <UButton
           :label="selectedCount > 0 ? `Delete Selected (${selectedCount})` : 'Delete Selected'"
@@ -583,6 +592,9 @@ async function onImported() {
         </div>
       </template>
     </UModal>
+
+    <!-- Stream Player Modal -->
+    <M3u8PlayerModal v-model:open="streamOpen" />
 
     <!-- Import Folder Modal -->
     <ImportFolderModal v-model:open="importOpen" @imported="onImported" />
