@@ -21,7 +21,7 @@ from .resource import (
     TrashResponse,
 )
 from .stats import StatsResponse
-from .tag import TagCreate, TagResponse
+from .tag import TagCreate, TagResponse, TagUpdate
 
 __all__ = [
     "BatchDeleteRequest",
@@ -44,5 +44,6 @@ __all__ = [
     "StatsResponse",
     "TagCreate",
     "TagResponse",
+    "TagUpdate",
     "TrashResponse",
 ]

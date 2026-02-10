@@ -93,6 +93,31 @@ async def test_list_tags_resource_count_sums_resources_and_bookmarks(client, db)
     assert resp.json()[0]["resource_count"] == 2
 
 
+# -- PATCH /api/tags/{tag_id} --
+
+
+async def test_update_tag(client):
+    tag = await create_tag(client, "old-name")
+
+    resp = await client.patch(f"/api/tags/{tag['id']}", json={"name": "new-name"})
+    assert resp.status_code == 200
+    assert resp.json()["name"] == "new-name"
+    assert resp.json()["id"] == tag["id"]
+
+
+async def test_update_tag_not_found_returns_404(client):
+    resp = await client.patch("/api/tags/999", json={"name": "x"})
+    assert resp.status_code == 404
+
+
+async def test_update_tag_duplicate_name_returns_409(client):
+    await create_tag(client, "alpha")
+    tag_b = await create_tag(client, "beta")
+
+    resp = await client.patch(f"/api/tags/{tag_b['id']}", json={"name": "alpha"})
+    assert resp.status_code == 409
+
+
 # -- DELETE /api/tags/{tag_id} --
 
 

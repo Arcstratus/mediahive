@@ -18,6 +18,13 @@ const columns: TableColumn<Tag>[] = [
 ]
 
 const modalOpen = ref(false)
+const editModalOpen = ref(false)
+const editingTag = ref<Tag | null>(null)
+
+function openEditModal(tag: Tag) {
+  editingTag.value = tag
+  editModalOpen.value = true
+}
 
 async function deleteTag(id: number) {
   if (!confirm('Are you sure you want to delete this tag?')) return
@@ -44,6 +51,12 @@ async function deleteTag(id: number) {
       <template #actions-cell="{ row }">
         <div class="flex gap-1 justify-end">
           <UButton
+            icon="i-lucide-pencil"
+            variant="ghost"
+            size="xs"
+            @click="openEditModal(row.original)"
+          />
+          <UButton
             icon="i-lucide-trash-2"
             variant="ghost"
             color="error"
@@ -55,5 +68,6 @@ async function deleteTag(id: number) {
     </UTable>
 
     <CreateTagModal v-model:open="modalOpen" @created="refresh" />
+    <EditTagModal v-model:open="editModalOpen" :tag="editingTag" @updated="refresh" />
   </div>
 </template>

@@ -10,6 +10,9 @@ export function useTagsApi() {
     create: (name: string) =>
       $fetch<Tag>(`${apiBase}/tags`, { method: 'POST', body: { name } }),
 
+    update: (id: number, name: string) =>
+      $fetch<Tag>(`${apiBase}/tags/${id}`, { method: 'PATCH', body: { name } }),
+
     remove: (id: number) =>
       $fetch<void>(`${apiBase}/tags/${id}`, { method: 'DELETE' }),
   }

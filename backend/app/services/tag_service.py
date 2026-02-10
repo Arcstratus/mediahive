@@ -30,6 +30,19 @@ async def create_tag(db: AsyncSession, name: str) -> Tag:
     return tag
 
 
+async def update_tag(db: AsyncSession, tag_id: int, name: str) -> Tag:
+    tag = await db.get(Tag, tag_id)
+    if not tag:
+        raise HTTPException(status_code=404, detail="Tag not found")
+    existing = await db.scalar(select(Tag).where(Tag.name == name, Tag.id != tag_id))
+    if existing:
+        raise HTTPException(status_code=409, detail="Tag already exists")
+    tag.name = name
+    await db.commit()
+    await db.refresh(tag)
+    return tag
+
+
 async def list_tags_with_counts(db: AsyncSession) -> list[TagResponse]:
     resource_count_subq = (
         select(resource_tags.c.tag_id, func.count().label("cnt"))
