@@ -2,13 +2,18 @@ import asyncio
 import uuid
 from pathlib import Path
 
-from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import MEDIA_DIR
 from app.converters.probe import probe_video
 from app.converters.remux import remux_to_mp4
 from app.converters.transcode import transcode_to_mp4
+from app.exceptions import (
+    ConversionError,
+    ConversionNotNeededError,
+    ResourceNotFoundError,
+    ResourceValidationError,
+)
 from app.models import Resource
 from app.services.file_service import sha256_hash
 
@@ -19,11 +24,11 @@ async def validate_resource(
     """Fetch a resource and validate it exists, is not deleted, matches category, and has a file."""
     resource = await db.get(Resource, resource_id)
     if not resource or resource.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Resource not found")
+        raise ResourceNotFoundError("Resource not found")
     if resource.category != category:
-        raise HTTPException(status_code=400, detail=f"Resource is not a {category}")
+        raise ResourceValidationError(f"Resource is not a {category}")
     if not resource.filename:
-        raise HTTPException(status_code=400, detail="Resource has no file")
+        raise ResourceValidationError("Resource has no file")
     return resource
 
 
@@ -31,7 +36,7 @@ def build_source_path(resource: Resource) -> Path:
     """Build the source file path and validate it exists."""
     source_path = MEDIA_DIR / (resource.folder or "") / resource.filename
     if not source_path.is_file():
-        raise HTTPException(status_code=400, detail="Source file not found")
+        raise ResourceValidationError("Source file not found")
     return source_path
 
 
@@ -98,19 +103,17 @@ async def convert_image(
     )
     if not ok:
         temp_path.unlink(missing_ok=True)
-        raise HTTPException(status_code=400, detail=f"{ext.upper()} conversion failed")
+        raise ConversionError(f"{ext.upper()} conversion failed")
 
     return await finalize_conversion(temp_path, ext, resource, db)
 
 
-async def convert_to_mp4(
-    db: AsyncSession, resource_id: int, crf: int = 23
-) -> Resource:
+async def convert_to_mp4(db: AsyncSession, resource_id: int, crf: int = 23) -> Resource:
     resource = await validate_resource(db, resource_id, "video")
     source_path = build_source_path(resource)
 
     if source_path.suffix.lower() == ".mp4":
-        raise HTTPException(status_code=400, detail="Resource is already MP4")
+        raise ConversionNotNeededError("Resource is already MP4")
 
     ext = "mp4"
     temp_name = f"{uuid.uuid4()}.{ext}"
@@ -124,6 +127,6 @@ async def convert_to_mp4(
 
     if not ok:
         temp_path.unlink(missing_ok=True)
-        raise HTTPException(status_code=400, detail="MP4 conversion failed")
+        raise ConversionError("MP4 conversion failed")
 
     return await finalize_conversion(temp_path, ext, resource, db, category="video")

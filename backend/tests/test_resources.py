@@ -375,7 +375,7 @@ class TestUpdateResource:
             f"/api/resources/{created['id']}", json={"folder": "../escape"}
         )
         assert resp.status_code == 400
-        assert "Invalid folder path" in resp.json()["detail"]
+        assert "Invalid folder path" in resp.json()["error"]
 
 
 # ---------------------------------------------------------------------------
@@ -489,4 +489,4 @@ class TestDownloadResource:
             json={"url": "https://example.com/file.txt"},
         )
         assert resp.status_code == 400
-        assert "Unsupported URL extension" in resp.json()["detail"]
+        assert "Unsupported URL extension" in resp.json()["error"]

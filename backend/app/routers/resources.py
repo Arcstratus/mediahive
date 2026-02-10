@@ -2,17 +2,17 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from fastapi import (
-    APIRouter,
     BackgroundTasks,
     Depends,
-    HTTPException,
     Query,
     UploadFile,
 )
+from fastapi_error_map import ErrorAwareRouter
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.exceptions import ResourceNotFoundError, ResourceValidationError
 from app.schemas import (
     BatchDeleteRequest,
     BatchDeleteResponse,
@@ -23,7 +23,7 @@ from app.schemas import (
 )
 from app.services import resource_service
 
-router = APIRouter(tags=["Resources"])
+router = ErrorAwareRouter(tags=["Resources"])
 
 
 @router.post("/resources", response_model=ResourceResponse, status_code=201)
@@ -94,19 +94,31 @@ async def batch_delete_resources(
     return BatchDeleteResponse(deleted=deleted)
 
 
-@router.get("/resources/{resource_id}", response_model=ResourceResponse)
+@router.get(
+    "/resources/{resource_id}",
+    response_model=ResourceResponse,
+    error_map={ResourceNotFoundError: 404},
+)
 async def get_resource(resource_id: int, db: AsyncSession = Depends(get_db)):
     return await resource_service.get_resource(db, resource_id)
 
 
-@router.put("/resources/{resource_id}", response_model=ResourceResponse)
+@router.put(
+    "/resources/{resource_id}",
+    response_model=ResourceResponse,
+    error_map={ResourceNotFoundError: 404, ResourceValidationError: 400},
+)
 async def update_resource(
     resource_id: int, body: ResourceUpdate, db: AsyncSession = Depends(get_db)
 ):
     return await resource_service.update_resource(db, resource_id, body)
 
 
-@router.delete("/resources/{resource_id}", status_code=204)
+@router.delete(
+    "/resources/{resource_id}",
+    status_code=204,
+    error_map={ResourceNotFoundError: 404},
+)
 async def delete_resource(resource_id: int, db: AsyncSession = Depends(get_db)):
     await resource_service.soft_delete_resource(db, resource_id)
 
@@ -115,22 +127,30 @@ class DownloadRequest(BaseModel):
     url: str
 
 
-@router.post("/resources/download", status_code=202)
+@router.post(
+    "/resources/download",
+    status_code=202,
+    error_map={ResourceValidationError: 400},
+)
 async def download_resource(body: DownloadRequest, bg: BackgroundTasks):
     parsed = urlparse(body.url)
     ext = Path(parsed.path).suffix.lower()
 
     if ext not in resource_service.ALLOWED_EXTENSIONS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unsupported URL extension: {ext or '(none)'}",
+        raise ResourceValidationError(
+            f"Unsupported URL extension: {ext or '(none)'}",
         )
 
     bg.add_task(resource_service.bg_download, body.url, ext)
     return {"status": "downloading"}
 
 
-@router.post("/resources/upload", response_model=ResourceResponse, status_code=201)
+@router.post(
+    "/resources/upload",
+    response_model=ResourceResponse,
+    status_code=201,
+    error_map={ResourceValidationError: 400},
+)
 async def upload_resource(
     file: UploadFile,
     title: str | None = None,
@@ -147,13 +167,21 @@ class ThumbnailRequest(BaseModel):
     timestamp: float
 
 
-@router.post("/resources/{resource_id}/thumbnail", response_model=ResourceResponse)
+@router.post(
+    "/resources/{resource_id}/thumbnail",
+    response_model=ResourceResponse,
+    error_map={ResourceNotFoundError: 404, ResourceValidationError: 400},
+)
 async def set_thumbnail(
     resource_id: int, body: ThumbnailRequest, db: AsyncSession = Depends(get_db)
 ):
     return await resource_service.set_thumbnail(db, resource_id, body.timestamp)
 
 
-@router.delete("/resources/{resource_id}/thumbnail", response_model=ResourceResponse)
+@router.delete(
+    "/resources/{resource_id}/thumbnail",
+    response_model=ResourceResponse,
+    error_map={ResourceNotFoundError: 404},
+)
 async def remove_thumbnail(resource_id: int, db: AsyncSession = Depends(get_db)):
     return await resource_service.remove_thumbnail(db, resource_id)

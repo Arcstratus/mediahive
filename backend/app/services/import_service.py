@@ -2,11 +2,11 @@ import os
 import shutil
 from pathlib import Path
 
-from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import MEDIA_DIR
+from app.exceptions import ImportPathError
 from app.models import Resource
 from app.schemas import ImportFileItem, ScannedFile
 from app.services.file_service import classify_extension, sha256_hash
@@ -17,9 +17,7 @@ EXCLUDED_DIRS = {"node_modules", ".venv", ".git"}
 def scan_folder(path: str) -> list[ScannedFile]:
     folder = Path(path)
     if not folder.exists() or not folder.is_dir():
-        raise HTTPException(
-            status_code=400, detail="Path does not exist or is not a directory"
-        )
+        raise ImportPathError("Path does not exist or is not a directory")
 
     files: list[ScannedFile] = []
     for dirpath, dirnames, filenames in os.walk(folder):

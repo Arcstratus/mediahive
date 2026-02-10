@@ -38,11 +38,11 @@ async def batch_create_bookmarks(
     db: AsyncSession, items: list[BookmarkCreate]
 ) -> list[Bookmark]:
     existing_urls = set(
-        (await db.scalars(
-            select(Bookmark.url).where(
-                Bookmark.url.in_([b.url for b in items])
+        (
+            await db.scalars(
+                select(Bookmark.url).where(Bookmark.url.in_([b.url for b in items]))
             )
-        )).all()
+        ).all()
     )
     seen_urls: set[str] = set()
     bookmarks = []

@@ -1,14 +1,16 @@
-from fastapi import APIRouter, Depends
+from fastapi import Depends
+from fastapi_error_map import ErrorAwareRouter
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.exceptions import ImportPathError
 from app.schemas import ImportRequest, ImportResponse, ScanRequest, ScanResponse
 from app.services import import_service
 
-router = APIRouter(prefix="/imports", tags=["Imports"])
+router = ErrorAwareRouter(prefix="/imports", tags=["Imports"])
 
 
-@router.post("/scan", response_model=ScanResponse)
+@router.post("/scan", response_model=ScanResponse, error_map={ImportPathError: 400})
 async def scan_folder(body: ScanRequest):
     files = import_service.scan_folder(body.path)
     return ScanResponse(files=files)

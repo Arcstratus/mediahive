@@ -4,7 +4,6 @@ from pathlib import Path
 from urllib.parse import urljoin
 
 import httpx
-from fastapi import HTTPException
 from sqlalchemy import asc, desc, func, or_, select, type_coerce
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.types import String
@@ -17,9 +16,13 @@ from app.config import (
 )
 from app.converters import remux_to_mp4
 from app.database import async_session
+from app.exceptions import (
+    ResourceNotFoundError,
+    ResourceValidationError,
+    TrashedResourceNotFoundError,
+)
 from app.models import Resource, Tag, resource_tags
 from app.schemas import (
-    BatchDeleteResponse,
     PaginatedResponse,
     ResourceCreate,
     ResourceUpdate,
@@ -166,7 +169,7 @@ async def list_resource_folders(db: AsyncSession) -> list[dict]:
 async def get_resource(db: AsyncSession, resource_id: int) -> Resource:
     resource = await db.get(Resource, resource_id)
     if not resource or resource.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Resource not found")
+        raise ResourceNotFoundError("Resource not found")
     return resource
 
 
@@ -175,7 +178,7 @@ async def update_resource(
 ) -> Resource:
     resource = await db.get(Resource, resource_id)
     if not resource:
-        raise HTTPException(status_code=404, detail="Resource not found")
+        raise ResourceNotFoundError("Resource not found")
     update_data = body.model_dump(exclude_unset=True)
     tags_data = update_data.pop("tags", None)
     folder_data = update_data.pop("folder", ...)
@@ -190,7 +193,7 @@ async def update_resource(
         if new_folder == "":
             new_folder = None
         if new_folder and ".." in new_folder:
-            raise HTTPException(status_code=400, detail="Invalid folder path")
+            raise ResourceValidationError("Invalid folder path")
         old_folder = resource.folder
         if new_folder != old_folder:
             if resource.filename:
@@ -210,7 +213,7 @@ async def update_resource(
 async def soft_delete_resource(db: AsyncSession, resource_id: int) -> None:
     resource = await db.get(Resource, resource_id)
     if not resource or resource.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Resource not found")
+        raise ResourceNotFoundError("Resource not found")
     delete_thumbnail(resource.thumbnail)
     if resource.filename:
         move_to_trash(resource.filename, resource.folder)
@@ -339,9 +342,7 @@ async def upload_resource(
     if ext in VIDEO_EXTENSIONS:
         category = "video"
     elif ext not in IMAGE_EXTENSIONS:
-        raise HTTPException(
-            status_code=400, detail=f"Unsupported file extension: {ext}"
-        )
+        raise ResourceValidationError(f"Unsupported file extension: {ext}")
 
     thumbnail = None
     if category == "video":
@@ -372,15 +373,15 @@ async def set_thumbnail(
 ) -> Resource:
     resource = await db.get(Resource, resource_id)
     if not resource or resource.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Resource not found")
+        raise ResourceNotFoundError("Resource not found")
     if resource.category != "video":
-        raise HTTPException(status_code=400, detail="Resource is not a video")
+        raise ResourceValidationError("Resource is not a video")
     if not resource.filename:
-        raise HTTPException(status_code=400, detail="Video file not found")
+        raise ResourceValidationError("Video file not found")
 
     video_path = MEDIA_DIR / (resource.folder or "") / resource.filename
     if not video_path.is_file():
-        raise HTTPException(status_code=400, detail="Video file not found")
+        raise ResourceValidationError("Video file not found")
 
     # Delete old thumbnail if exists
     delete_thumbnail(resource.thumbnail)
@@ -406,7 +407,7 @@ async def set_thumbnail(
     )
     await proc.communicate()
     if proc.returncode != 0 or not thumb_path.is_file():
-        raise HTTPException(status_code=400, detail="FFmpeg extraction failed")
+        raise ResourceValidationError("FFmpeg extraction failed")
 
     resource.thumbnail = thumb_filename
     await db.commit()
@@ -417,7 +418,7 @@ async def set_thumbnail(
 async def remove_thumbnail(db: AsyncSession, resource_id: int) -> Resource:
     resource = await db.get(Resource, resource_id)
     if not resource or resource.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Resource not found")
+        raise ResourceNotFoundError("Resource not found")
 
     if resource.thumbnail:
         delete_thumbnail(resource.thumbnail)
@@ -445,7 +446,7 @@ async def list_trash(db: AsyncSession) -> list[Resource]:
 async def restore_resource(db: AsyncSession, resource_id: int) -> Resource:
     resource = await db.get(Resource, resource_id)
     if not resource or resource.deleted_at is None:
-        raise HTTPException(status_code=404, detail="Trashed resource not found")
+        raise TrashedResourceNotFoundError("Trashed resource not found")
 
     if resource.filename:
         restore_from_trash(resource.filename, resource.folder)
@@ -459,7 +460,7 @@ async def restore_resource(db: AsyncSession, resource_id: int) -> Resource:
 async def permanently_delete(db: AsyncSession, resource_id: int) -> None:
     resource = await db.get(Resource, resource_id)
     if not resource or resource.deleted_at is None:
-        raise HTTPException(status_code=404, detail="Trashed resource not found")
+        raise TrashedResourceNotFoundError("Trashed resource not found")
 
     if resource.filename:
         permanently_delete_from_trash(resource.filename)
@@ -469,9 +470,7 @@ async def permanently_delete(db: AsyncSession, resource_id: int) -> None:
 
 
 async def empty_trash(db: AsyncSession) -> None:
-    result = await db.execute(
-        select(Resource).where(Resource.deleted_at.isnot(None))
-    )
+    result = await db.execute(select(Resource).where(Resource.deleted_at.isnot(None)))
     resources = result.scalars().all()
 
     for resource in resources:

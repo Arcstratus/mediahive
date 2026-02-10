@@ -79,7 +79,7 @@ async def test_scan_nonexistent_path_returns_400(client: httpx.AsyncClient):
         "/api/imports/scan", json={"path": "/nonexistent/path/abc123"}
     )
     assert resp.status_code == 400
-    assert "does not exist" in resp.json()["detail"]
+    assert "does not exist" in resp.json()["error"]
 
 
 async def test_scan_excludes_excluded_directories(

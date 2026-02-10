@@ -1,6 +1,6 @@
-from fastapi import APIRouter
+from fastapi_error_map import ErrorAwareRouter
 
-router = APIRouter(tags=["Health"])
+router = ErrorAwareRouter(tags=["Health"])
 
 
 @router.get("/health")

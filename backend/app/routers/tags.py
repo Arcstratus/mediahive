@@ -10,7 +10,12 @@ from app.services import tag_service
 router = ErrorAwareRouter(tags=["Tags"])
 
 
-@router.post("/tags", response_model=TagResponse, status_code=201, error_map={TagAlreadyExistsError: 409})
+@router.post(
+    "/tags",
+    response_model=TagResponse,
+    status_code=201,
+    error_map={TagAlreadyExistsError: 409},
+)
 async def create_tag(body: TagCreate, db: AsyncSession = Depends(get_db)):
     return await tag_service.create_tag(db, body.name)
 

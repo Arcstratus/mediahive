@@ -132,7 +132,7 @@ async def test_restore_trashed_resource(client, db):
 async def test_restore_nonexistent_resource_returns_404(client):
     resp = await client.post("/api/trash/99999/restore")
     assert resp.status_code == 404
-    assert resp.json()["detail"] == "Trashed resource not found"
+    assert resp.json()["error"] == "Trashed resource not found"
 
 
 async def test_restore_active_resource_returns_404(client, db):
@@ -143,7 +143,7 @@ async def test_restore_active_resource_returns_404(client, db):
 
     resp = await client.post(f"/api/trash/{resource.id}/restore")
     assert resp.status_code == 404
-    assert resp.json()["detail"] == "Trashed resource not found"
+    assert resp.json()["error"] == "Trashed resource not found"
 
 
 # -- DELETE /api/trash/{resource_id} --
@@ -167,7 +167,7 @@ async def test_permanently_delete_trashed_resource(client, db):
 async def test_permanently_delete_nonexistent_resource_returns_404(client):
     resp = await client.delete("/api/trash/99999")
     assert resp.status_code == 404
-    assert resp.json()["detail"] == "Trashed resource not found"
+    assert resp.json()["error"] == "Trashed resource not found"
 
 
 async def test_permanently_delete_active_resource_returns_404(client, db):
@@ -178,7 +178,7 @@ async def test_permanently_delete_active_resource_returns_404(client, db):
 
     resp = await client.delete(f"/api/trash/{resource.id}")
     assert resp.status_code == 404
-    assert resp.json()["detail"] == "Trashed resource not found"
+    assert resp.json()["error"] == "Trashed resource not found"
 
 
 # -- DELETE /api/trash (empty trash) --
