@@ -469,7 +469,7 @@ class TestBatchDelete:
 
 
 class TestDownloadResource:
-    @patch("app.routers.resources._bg_download", new_callable=AsyncMock)
+    @patch("app.services.resource_service.bg_download", new_callable=AsyncMock)
     async def test_returns_202_for_valid_image_url(
         self, mock_bg: AsyncMock, client: httpx.AsyncClient
     ):

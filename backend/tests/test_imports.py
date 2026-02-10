@@ -126,7 +126,7 @@ async def test_execute_import_creates_resources(
     img2 = tmp_path / "b.png"
     img2.write_bytes(b"image-content-b")
 
-    with patch("app.routers.imports.MEDIA_DIR", media_dir):
+    with patch("app.services.import_service.MEDIA_DIR", media_dir):
         resp = await client.post(
             "/api/imports/execute",
             json={
@@ -178,7 +178,7 @@ async def test_execute_import_skips_existing_resources(
     db.add(existing)
     await db.commit()
 
-    with patch("app.routers.imports.MEDIA_DIR", media_dir):
+    with patch("app.services.import_service.MEDIA_DIR", media_dir):
         resp = await client.post(
             "/api/imports/execute",
             json={"files": [{"path": str(img), "type": "image"}]},
@@ -205,7 +205,7 @@ async def test_execute_import_skips_nonexistent_source_files(
 
     nonexistent = tmp_path / "does_not_exist.jpg"
 
-    with patch("app.routers.imports.MEDIA_DIR", media_dir):
+    with patch("app.services.import_service.MEDIA_DIR", media_dir):
         resp = await client.post(
             "/api/imports/execute",
             json={"files": [{"path": str(nonexistent), "type": "image"}]},
@@ -229,7 +229,7 @@ async def test_execute_import_empty_file_list(
     media_dir = tmp_path / "media"
     media_dir.mkdir()
 
-    with patch("app.routers.imports.MEDIA_DIR", media_dir):
+    with patch("app.services.import_service.MEDIA_DIR", media_dir):
         resp = await client.post(
             "/api/imports/execute",
             json={"files": []},
