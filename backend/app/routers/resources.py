@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.types import String
 
 from app.config import IMAGE_EXTENSIONS, MEDIA_DIR, THUMBNAIL_DIR, TRASH_DIR, VIDEO_EXTENSIONS
+from app.converters import remux_to_mp4
 from app.database import async_session, get_db
 from app.models import Resource, Tag, resource_tags
 from app.schemas import (
@@ -58,26 +59,6 @@ async def _generate_thumbnail(video_path: Path, sha_prefix: str) -> str | None:
         pass
     return None
 
-
-async def _remux_ts_to_mp4(ts_path: Path, mp4_path: Path) -> bool:
-    """Remux a .ts file to .mp4 using FFmpeg (copy streams, fix timestamps)."""
-    try:
-        proc = await asyncio.create_subprocess_exec(
-            "ffmpeg",
-            "-fflags", "+genpts+discardcorrupt",
-            "-i", str(ts_path),
-            "-c", "copy",
-            "-movflags", "+faststart",
-            "-avoid_negative_ts", "make_zero",
-            str(mp4_path),
-            "-y",
-            stdout=asyncio.subprocess.DEVNULL,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        await proc.communicate()
-        return proc.returncode == 0 and mp4_path.is_file()
-    except Exception:
-        return False
 
 
 async def _resolve_tags(db: AsyncSession, tag_names: list[str]) -> list[Tag]:
@@ -366,7 +347,7 @@ async def _bg_download(url: str, ext: str) -> None:
         with open(tmp_ts, "wb") as f:
             f.write(content)
         mp4_path = MEDIA_DIR / f"{sha}.mp4"
-        ok = await _remux_ts_to_mp4(tmp_ts, mp4_path)
+        ok = await remux_to_mp4(tmp_ts, mp4_path)
         tmp_ts.unlink(missing_ok=True)
         if not ok:
             return
