@@ -10,14 +10,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.types import String
 
 from app.config import (
-    IMAGE_EXTENSIONS,
     MEDIA_DIR,
     THUMBNAIL_DIR,
-    VIDEO_EXTENSIONS,
 )
 from app.converters import remux_to_mp4
 from app.database import async_session
-from app.exceptions import ResourceNotFoundError, ResourceValidationError
+from sqlalchemy.exc import IntegrityError
+
+from app.exceptions import (
+    ResourceAlreadyExistsError,
+    ResourceNotFoundError,
+    ResourceValidationError,
+)
 from app.models import Resource, ResourceCategory, Tag, resource_tags
 from app.schemas import (
     PaginatedResponse,
@@ -25,6 +29,7 @@ from app.schemas import (
     ResourceUpdate,
 )
 from app.services.file_service import (
+    classify_extension,
     delete_thumbnail,
     generate_thumbnail,
     move_file,
@@ -288,10 +293,8 @@ async def upload_resource(
         with open(dest, "wb") as f:
             f.write(file_content)
 
-    category = ResourceCategory.image
-    if ext in VIDEO_EXTENSIONS:
-        category = ResourceCategory.video
-    elif ext not in IMAGE_EXTENSIONS:
+    category = classify_extension(ext)
+    if category == ResourceCategory.unknown:
         raise ResourceValidationError(f"Unsupported file extension: {ext}")
 
     thumbnail = None
@@ -308,7 +311,11 @@ async def upload_resource(
         tag_names = [t.strip() for t in tags_csv.split(",") if t.strip()]
         resource.tags = await resolve_tags(db, tag_names)
     db.add(resource)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise ResourceAlreadyExistsError("A resource with this file already exists")
     await db.refresh(resource)
     return resource
 
@@ -341,11 +348,7 @@ async def bg_download(url: str, ext: str) -> None:
                     f.write(content)
 
         filename = f"{sha}{ext}"
-        category = (
-            ResourceCategory.video
-            if ext in VIDEO_EXTENSIONS
-            else ResourceCategory.image
-        )
+        category = classify_extension(ext)
 
         thumbnail = None
         if category == ResourceCategory.video:

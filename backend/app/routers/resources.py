@@ -13,7 +13,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import ALLOWED_EXTENSIONS
 from app.database import get_db
-from app.exceptions import ResourceNotFoundError, ResourceValidationError
+from app.exceptions import (
+    ResourceAlreadyExistsError,
+    ResourceNotFoundError,
+    ResourceValidationError,
+)
 from app.schemas import (
     BatchDeleteRequest,
     PaginatedResponse,
@@ -148,7 +152,7 @@ async def download_resource(body: DownloadRequest, bg: BackgroundTasks):
     "/resources/upload",
     response_model=ResourceResponse,
     status_code=201,
-    error_map={ResourceValidationError: 400},
+    error_map={ResourceValidationError: 400, ResourceAlreadyExistsError: 409},
 )
 async def upload_resource(
     file: UploadFile,
