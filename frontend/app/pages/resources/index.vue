@@ -232,21 +232,21 @@ async function onRefreshAll() {
 
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-2">
-        <UButton label="Upload File" icon="i-lucide-upload" @click="uploadOpen = true" />
+        <UButton label="Upload" icon="i-lucide-upload" @click="uploadOpen = true" />
         <UButton
-          label="Import Folder"
+          label="Import"
           icon="i-lucide-folder-input"
           variant="soft"
           @click="importOpen = true"
         />
         <UButton
-          label="Download URL"
+          label="Download from URL"
           icon="i-lucide-download"
           variant="soft"
           @click="downloadOpen = true"
         />
         <UButton
-          :label="selectedCount > 0 ? `Delete Selected (${selectedCount})` : 'Delete Selected'"
+          :label="selectedCount > 0 ? `Delete (${selectedCount})` : 'Delete'"
           icon="i-lucide-trash-2"
           color="error"
           variant="soft"
