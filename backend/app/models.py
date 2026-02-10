@@ -48,6 +48,9 @@ class Resource(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True, default=None
+    )
 
     tags: Mapped[list["Tag"]] = relationship(
         secondary=resource_tags, back_populates="resources", lazy="selectin"

@@ -1,5 +1,6 @@
 import hashlib
 import shutil
+from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
 
@@ -85,8 +86,8 @@ async def list_resources(
 ):
     offset = (page - 1) * per_page
 
-    base_query = select(Resource)
-    count_query = select(func.count(Resource.id))
+    base_query = select(Resource).where(Resource.deleted_at.is_(None))
+    count_query = select(func.count(Resource.id)).where(Resource.deleted_at.is_(None))
 
     if folder:
         base_query = base_query.where(Resource.folder == folder)
@@ -139,7 +140,7 @@ async def list_resource_ids(
     sort_desc: bool = Query(True),
     db: AsyncSession = Depends(get_db),
 ):
-    query = select(Resource.id)
+    query = select(Resource.id).where(Resource.deleted_at.is_(None))
 
     if folder:
         query = query.where(Resource.folder == folder)
@@ -172,6 +173,7 @@ async def list_resource_folders(db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Resource.folder, func.count(Resource.id))
         .where(Resource.folder.isnot(None))
+        .where(Resource.deleted_at.is_(None))
         .group_by(Resource.folder)
         .order_by(Resource.folder)
     )
@@ -183,16 +185,17 @@ async def batch_delete_resources(
     body: BatchDeleteRequest, db: AsyncSession = Depends(get_db)
 ):
     deleted = 0
+    now = datetime.now(timezone.utc)
     for resource_id in body.ids:
         resource = await db.get(Resource, resource_id)
-        if not resource:
+        if not resource or resource.deleted_at is not None:
             continue
         if resource.filename:
             src = MEDIA_DIR / (resource.folder or "") / resource.filename
             if src.is_file():
                 TRASH_DIR.mkdir(parents=True, exist_ok=True)
                 shutil.move(str(src), str(TRASH_DIR / resource.filename))
-        await db.delete(resource)
+        resource.deleted_at = now
         deleted += 1
     await db.commit()
     return BatchDeleteResponse(deleted=deleted)
@@ -201,7 +204,7 @@ async def batch_delete_resources(
 @router.get("/resources/{resource_id}", response_model=ResourceResponse)
 async def get_resource(resource_id: int, db: AsyncSession = Depends(get_db)):
     resource = await db.get(Resource, resource_id)
-    if not resource:
+    if not resource or resource.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Resource not found")
     return resource
 
@@ -246,14 +249,14 @@ async def update_resource(
 @router.delete("/resources/{resource_id}", status_code=204)
 async def delete_resource(resource_id: int, db: AsyncSession = Depends(get_db)):
     resource = await db.get(Resource, resource_id)
-    if not resource:
+    if not resource or resource.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Resource not found")
     if resource.filename:
         src = MEDIA_DIR / (resource.folder or "") / resource.filename
         if src.is_file():
             TRASH_DIR.mkdir(parents=True, exist_ok=True)
             shutil.move(str(src), str(TRASH_DIR / resource.filename))
-    await db.delete(resource)
+    resource.deleted_at = datetime.now(timezone.utc)
     await db.commit()
 
 

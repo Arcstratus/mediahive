@@ -24,6 +24,11 @@ const items = [
     label: 'Tags',
     icon: 'i-lucide-tag',
     to: '/tags'
+  },
+  {
+    label: 'Trash',
+    icon: 'i-lucide-trash-2',
+    to: '/trash'
   }
 ]
 </script>

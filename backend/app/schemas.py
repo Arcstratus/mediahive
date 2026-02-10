@@ -47,6 +47,18 @@ class ResourceResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class TrashResponse(BaseModel):
+    id: int
+    category: ResourceCategory
+    filename: str | None
+    title: str | None
+    folder: str | None = None
+    created_at: datetime
+    deleted_at: datetime | None = None
+
+    model_config = {"from_attributes": True}
+
+
 class PaginatedResponse(BaseModel):
     items: list[ResourceResponse]
     total: int
