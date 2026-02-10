@@ -18,6 +18,11 @@ from app.models import Resource, ResourceCategory
 from app.services.file_service import sha256_hash
 
 
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
 async def validate_resource(
     db: AsyncSession, resource_id: int, category: ResourceCategory
 ) -> Resource:
@@ -77,6 +82,11 @@ async def finalize_conversion(
     await db.commit()
     await db.refresh(new_resource)
     return new_resource
+
+
+# ---------------------------------------------------------------------------
+# Converters
+# ---------------------------------------------------------------------------
 
 
 async def convert_image(

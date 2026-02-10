@@ -36,7 +36,7 @@ from app.services.tag_service import resolve_tags
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Module-level constants
+# Constants & helpers
 # ---------------------------------------------------------------------------
 
 _ext_expr = type_coerce(
@@ -49,23 +49,6 @@ SORTABLE_COLUMNS = {
     "ext": _ext_expr,
     "created_at": Resource.created_at,
 }
-
-
-# ---------------------------------------------------------------------------
-# Resource CRUD
-# ---------------------------------------------------------------------------
-
-
-async def create_resource(db: AsyncSession, body: ResourceCreate) -> Resource:
-    resource = Resource(
-        category=body.category, filename=body.filename, title=body.title
-    )
-    if body.tags:
-        resource.tags = await resolve_tags(db, body.tags)
-    db.add(resource)
-    await db.commit()
-    await db.refresh(resource)
-    return resource
 
 
 def _apply_filters(query, *, category, search, ext, tag, folder):
@@ -91,6 +74,40 @@ def _apply_filters(query, *, category, search, ext, tag, folder):
             )
             query = query.where(Resource.id.in_(tag_subq))
     return query
+
+
+async def download_direct(url: str) -> bytes:
+    async with httpx.AsyncClient(follow_redirects=True, timeout=120.0) as client:
+        resp = await client.get(url)
+        resp.raise_for_status()
+        return resp.content
+
+
+async def download_m3u8(url: str) -> tuple[bytes, str]:
+    async with httpx.AsyncClient(follow_redirects=True, timeout=120.0) as client:
+        resp = await client.get(url)
+        resp.raise_for_status()
+        playlist = resp.text
+
+        segments: list[str] = []
+        for line in playlist.splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            segments.append(urljoin(url, line))
+
+        chunks: list[bytes] = []
+        for seg_url in segments:
+            seg_resp = await client.get(seg_url)
+            seg_resp.raise_for_status()
+            chunks.append(seg_resp.content)
+
+        return b"".join(chunks), ".ts"
+
+
+# ---------------------------------------------------------------------------
+# List
+# ---------------------------------------------------------------------------
 
 
 async def list_resources(
@@ -161,6 +178,23 @@ async def list_resource_folders(db: AsyncSession) -> list[dict]:
     return [{"folder": f, "count": c} for f, c in result.all()]
 
 
+# ---------------------------------------------------------------------------
+# CRUD
+# ---------------------------------------------------------------------------
+
+
+async def create_resource(db: AsyncSession, body: ResourceCreate) -> Resource:
+    resource = Resource(
+        category=body.category, filename=body.filename, title=body.title
+    )
+    if body.tags:
+        resource.tags = await resolve_tags(db, body.tags)
+    db.add(resource)
+    await db.commit()
+    await db.refresh(resource)
+    return resource
+
+
 async def get_resource(db: AsyncSession, resource_id: int) -> Resource:
     resource = await db.get(Resource, resource_id)
     if not resource or resource.deleted_at is not None:
@@ -201,7 +235,7 @@ async def update_resource(
 
 
 # ---------------------------------------------------------------------------
-# Soft-delete / batch-delete
+# Delete
 # ---------------------------------------------------------------------------
 
 
@@ -233,37 +267,50 @@ async def batch_soft_delete(db: AsyncSession, ids: list[int]) -> int:
 
 
 # ---------------------------------------------------------------------------
-# Download helpers
+# Upload & download
 # ---------------------------------------------------------------------------
 
 
-async def download_direct(url: str) -> bytes:
-    async with httpx.AsyncClient(follow_redirects=True, timeout=120.0) as client:
-        resp = await client.get(url)
-        resp.raise_for_status()
-        return resp.content
+async def upload_resource(
+    db: AsyncSession,
+    file_content: bytes,
+    filename: str | None,
+    title: str | None,
+    tags_csv: str | None,
+) -> Resource:
+    sha = sha256_hash(file_content)
+    ext = Path(filename or "").suffix.lower()
+    new_name = f"{sha}{ext}"
 
+    MEDIA_DIR.mkdir(parents=True, exist_ok=True)
+    dest = MEDIA_DIR / new_name
+    if not dest.exists():
+        with open(dest, "wb") as f:
+            f.write(file_content)
 
-async def download_m3u8(url: str) -> tuple[bytes, str]:
-    async with httpx.AsyncClient(follow_redirects=True, timeout=120.0) as client:
-        resp = await client.get(url)
-        resp.raise_for_status()
-        playlist = resp.text
+    category = ResourceCategory.image
+    if ext in VIDEO_EXTENSIONS:
+        category = ResourceCategory.video
+    elif ext not in IMAGE_EXTENSIONS:
+        raise ResourceValidationError(f"Unsupported file extension: {ext}")
 
-        segments: list[str] = []
-        for line in playlist.splitlines():
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            segments.append(urljoin(url, line))
+    thumbnail = None
+    if category == ResourceCategory.video:
+        thumbnail = await generate_thumbnail(dest, sha)
 
-        chunks: list[bytes] = []
-        for seg_url in segments:
-            seg_resp = await client.get(seg_url)
-            seg_resp.raise_for_status()
-            chunks.append(seg_resp.content)
-
-        return b"".join(chunks), ".ts"
+    resource = Resource(
+        category=category,
+        title=title or filename,
+        filename=new_name,
+        thumbnail=thumbnail,
+    )
+    if tags_csv:
+        tag_names = [t.strip() for t in tags_csv.split(",") if t.strip()]
+        resource.tags = await resolve_tags(db, tag_names)
+    db.add(resource)
+    await db.commit()
+    await db.refresh(resource)
+    return resource
 
 
 async def bg_download(url: str, ext: str) -> None:
@@ -323,54 +370,7 @@ async def bg_download(url: str, ext: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Upload
-# ---------------------------------------------------------------------------
-
-
-async def upload_resource(
-    db: AsyncSession,
-    file_content: bytes,
-    filename: str | None,
-    title: str | None,
-    tags_csv: str | None,
-) -> Resource:
-    sha = sha256_hash(file_content)
-    ext = Path(filename or "").suffix.lower()
-    new_name = f"{sha}{ext}"
-
-    MEDIA_DIR.mkdir(parents=True, exist_ok=True)
-    dest = MEDIA_DIR / new_name
-    if not dest.exists():
-        with open(dest, "wb") as f:
-            f.write(file_content)
-
-    category = ResourceCategory.image
-    if ext in VIDEO_EXTENSIONS:
-        category = ResourceCategory.video
-    elif ext not in IMAGE_EXTENSIONS:
-        raise ResourceValidationError(f"Unsupported file extension: {ext}")
-
-    thumbnail = None
-    if category == ResourceCategory.video:
-        thumbnail = await generate_thumbnail(dest, sha)
-
-    resource = Resource(
-        category=category,
-        title=title or filename,
-        filename=new_name,
-        thumbnail=thumbnail,
-    )
-    if tags_csv:
-        tag_names = [t.strip() for t in tags_csv.split(",") if t.strip()]
-        resource.tags = await resolve_tags(db, tag_names)
-    db.add(resource)
-    await db.commit()
-    await db.refresh(resource)
-    return resource
-
-
-# ---------------------------------------------------------------------------
-# Thumbnail management
+# Thumbnail
 # ---------------------------------------------------------------------------
 
 

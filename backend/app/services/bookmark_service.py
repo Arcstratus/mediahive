@@ -15,55 +15,9 @@ SORTABLE_COLUMNS = {
 }
 
 
-async def create_bookmark(db: AsyncSession, body: BookmarkCreate) -> Bookmark:
-    bookmark = Bookmark(
-        title=body.title,
-        url=body.url,
-        description=body.description,
-        folder=body.folder,
-    )
-    if body.tags:
-        bookmark.tags = await tag_service.resolve_tags(db, body.tags)
-    db.add(bookmark)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise BookmarkAlreadyExistsError("Bookmark with this URL already exists")
-    await db.refresh(bookmark)
-    return bookmark
-
-
-async def batch_create_bookmarks(
-    db: AsyncSession, items: list[BookmarkCreate]
-) -> list[Bookmark]:
-    existing_urls = set(
-        (
-            await db.scalars(
-                select(Bookmark.url).where(Bookmark.url.in_([b.url for b in items]))
-            )
-        ).all()
-    )
-    seen_urls: set[str] = set()
-    bookmarks = []
-    for body in items:
-        if body.url in existing_urls or body.url in seen_urls:
-            continue
-        seen_urls.add(body.url)
-        bookmark = Bookmark(
-            title=body.title,
-            url=body.url,
-            description=body.description,
-            folder=body.folder,
-        )
-        if body.tags:
-            bookmark.tags = await tag_service.resolve_tags(db, body.tags)
-        db.add(bookmark)
-        bookmarks.append(bookmark)
-    await db.commit()
-    for bm in bookmarks:
-        await db.refresh(bm)
-    return bookmarks
+# ---------------------------------------------------------------------------
+# List
+# ---------------------------------------------------------------------------
 
 
 async def list_bookmarks(
@@ -109,6 +63,30 @@ async def list_bookmarks(
     return items, total
 
 
+# ---------------------------------------------------------------------------
+# CRUD
+# ---------------------------------------------------------------------------
+
+
+async def create_bookmark(db: AsyncSession, body: BookmarkCreate) -> Bookmark:
+    bookmark = Bookmark(
+        title=body.title,
+        url=body.url,
+        description=body.description,
+        folder=body.folder,
+    )
+    if body.tags:
+        bookmark.tags = await tag_service.resolve_tags(db, body.tags)
+    db.add(bookmark)
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise BookmarkAlreadyExistsError("Bookmark with this URL already exists")
+    await db.refresh(bookmark)
+    return bookmark
+
+
 async def get_bookmark(db: AsyncSession, bookmark_id: int) -> Bookmark:
     bookmark = await db.get(Bookmark, bookmark_id)
     if not bookmark:
@@ -141,6 +119,43 @@ async def delete_bookmark(db: AsyncSession, bookmark_id: int) -> None:
         raise BookmarkNotFoundError("Bookmark not found")
     await db.delete(bookmark)
     await db.commit()
+
+
+# ---------------------------------------------------------------------------
+# Batch
+# ---------------------------------------------------------------------------
+
+
+async def batch_create_bookmarks(
+    db: AsyncSession, items: list[BookmarkCreate]
+) -> list[Bookmark]:
+    existing_urls = set(
+        (
+            await db.scalars(
+                select(Bookmark.url).where(Bookmark.url.in_([b.url for b in items]))
+            )
+        ).all()
+    )
+    seen_urls: set[str] = set()
+    bookmarks = []
+    for body in items:
+        if body.url in existing_urls or body.url in seen_urls:
+            continue
+        seen_urls.add(body.url)
+        bookmark = Bookmark(
+            title=body.title,
+            url=body.url,
+            description=body.description,
+            folder=body.folder,
+        )
+        if body.tags:
+            bookmark.tags = await tag_service.resolve_tags(db, body.tags)
+        db.add(bookmark)
+        bookmarks.append(bookmark)
+    await db.commit()
+    for bm in bookmarks:
+        await db.refresh(bm)
+    return bookmarks
 
 
 async def batch_delete_bookmarks(db: AsyncSession, ids: list[int]) -> int:
