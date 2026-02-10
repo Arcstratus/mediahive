@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import shutil
 from datetime import datetime, timezone
@@ -18,7 +19,7 @@ from sqlalchemy import asc, desc, func, or_, select, type_coerce
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.types import String
 
-from app.config import IMAGE_EXTENSIONS, MEDIA_DIR, TRASH_DIR, VIDEO_EXTENSIONS
+from app.config import IMAGE_EXTENSIONS, MEDIA_DIR, THUMBNAIL_DIR, TRASH_DIR, VIDEO_EXTENSIONS
 from app.database import async_session, get_db
 from app.models import Resource, Tag, resource_tags
 from app.schemas import (
@@ -31,6 +32,52 @@ from app.schemas import (
 )
 
 router = APIRouter(tags=["Resources"])
+
+
+async def _generate_thumbnail(video_path: Path, sha_prefix: str) -> str | None:
+    """Extract a frame at 1s from a video and save as a JPEG thumbnail."""
+    thumb_filename = f"{sha_prefix}_thumb.jpg"
+    THUMBNAIL_DIR.mkdir(parents=True, exist_ok=True)
+    thumb_path = THUMBNAIL_DIR / thumb_filename
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "ffmpeg",
+            "-ss", "1",
+            "-i", str(video_path),
+            "-frames:v", "1",
+            "-q:v", "2",
+            str(thumb_path),
+            "-y",
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        await proc.communicate()
+        if proc.returncode == 0 and thumb_path.is_file():
+            return thumb_filename
+    except Exception:
+        pass
+    return None
+
+
+async def _remux_ts_to_mp4(ts_path: Path, mp4_path: Path) -> bool:
+    """Remux a .ts file to .mp4 using FFmpeg (copy streams, fix timestamps)."""
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "ffmpeg",
+            "-fflags", "+genpts+discardcorrupt",
+            "-i", str(ts_path),
+            "-c", "copy",
+            "-movflags", "+faststart",
+            "-avoid_negative_ts", "make_zero",
+            str(mp4_path),
+            "-y",
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        await proc.communicate()
+        return proc.returncode == 0 and mp4_path.is_file()
+    except Exception:
+        return False
 
 
 async def _resolve_tags(db: AsyncSession, tag_names: list[str]) -> list[Tag]:
@@ -190,6 +237,10 @@ async def batch_delete_resources(
         resource = await db.get(Resource, resource_id)
         if not resource or resource.deleted_at is not None:
             continue
+        if resource.thumbnail:
+            thumb_path = THUMBNAIL_DIR / resource.thumbnail
+            if thumb_path.is_file():
+                thumb_path.unlink()
         if resource.filename:
             src = MEDIA_DIR / (resource.folder or "") / resource.filename
             if src.is_file():
@@ -251,6 +302,10 @@ async def delete_resource(resource_id: int, db: AsyncSession = Depends(get_db)):
     resource = await db.get(Resource, resource_id)
     if not resource or resource.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Resource not found")
+    if resource.thumbnail:
+        thumb_path = THUMBNAIL_DIR / resource.thumbnail
+        if thumb_path.is_file():
+            thumb_path.unlink()
     if resource.filename:
         src = MEDIA_DIR / (resource.folder or "") / resource.filename
         if src.is_file():
@@ -298,27 +353,46 @@ _ALLOWED_EXTENSIONS = IMAGE_EXTENSIONS | VIDEO_EXTENSIONS | {".m3u8"}
 
 async def _bg_download(url: str, ext: str) -> None:
     if ext == ".m3u8":
-        content, ext = await _download_m3u8(url)
+        content, _ = await _download_m3u8(url)
     else:
         content = await _download_direct(url)
 
-    sha256 = hashlib.sha256(content).hexdigest()
-    filename = f"{sha256}{ext}"
-
+    sha = hashlib.sha256(content).hexdigest()
     MEDIA_DIR.mkdir(parents=True, exist_ok=True)
-    dest = MEDIA_DIR / filename
-    if not dest.exists():
-        with open(dest, "wb") as f:
-            f.write(content)
 
+    if ext == ".m3u8":
+        # Write TS to a temp file, remux to MP4, then delete the temp
+        tmp_ts = MEDIA_DIR / f"{sha}.ts.tmp"
+        with open(tmp_ts, "wb") as f:
+            f.write(content)
+        mp4_path = MEDIA_DIR / f"{sha}.mp4"
+        ok = await _remux_ts_to_mp4(tmp_ts, mp4_path)
+        tmp_ts.unlink(missing_ok=True)
+        if not ok:
+            return
+        ext = ".mp4"
+    else:
+        dest = MEDIA_DIR / f"{sha}{ext}"
+        if not dest.exists():
+            with open(dest, "wb") as f:
+                f.write(content)
+
+    filename = f"{sha}{ext}"
     category = "video" if ext in VIDEO_EXTENSIONS else "image"
+
+    thumbnail = None
+    if category == "video":
+        thumbnail = await _generate_thumbnail(MEDIA_DIR / filename, sha)
+
     async with async_session() as db:
         existing = await db.scalar(
             select(Resource).where(Resource.filename == filename)
         )
         if existing:
             return
-        resource = Resource(category=category, title=filename, filename=filename)
+        resource = Resource(
+            category=category, title=filename, filename=filename, thumbnail=thumbnail
+        )
         db.add(resource)
         await db.commit()
 
@@ -364,10 +438,16 @@ async def upload_resource(
             status_code=400, detail=f"Unsupported file extension: {ext}"
         )
 
+    thumbnail = None
+    if category == "video":
+        sha_prefix = sha256
+        thumbnail = await _generate_thumbnail(dest, sha_prefix)
+
     resource = Resource(
         category=category,
         title=title or file.filename,
         filename=new_name,
+        thumbnail=thumbnail,
     )
     if tags:
         tag_names = [t.strip() for t in tags.split(",") if t.strip()]
@@ -375,4 +455,74 @@ async def upload_resource(
     db.add(resource)
     await db.commit()
     await db.refresh(resource)
+    return resource
+
+
+class ThumbnailRequest(BaseModel):
+    timestamp: float
+
+
+@router.post("/resources/{resource_id}/thumbnail", response_model=ResourceResponse)
+async def set_thumbnail(
+    resource_id: int, body: ThumbnailRequest, db: AsyncSession = Depends(get_db)
+):
+    resource = await db.get(Resource, resource_id)
+    if not resource or resource.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="Resource not found")
+    if resource.category != "video":
+        raise HTTPException(status_code=400, detail="Resource is not a video")
+    if not resource.filename:
+        raise HTTPException(status_code=400, detail="Video file not found")
+
+    video_path = MEDIA_DIR / (resource.folder or "") / resource.filename
+    if not video_path.is_file():
+        raise HTTPException(status_code=400, detail="Video file not found")
+
+    # Delete old thumbnail if exists
+    if resource.thumbnail:
+        old_thumb = THUMBNAIL_DIR / resource.thumbnail
+        if old_thumb.is_file():
+            old_thumb.unlink()
+
+    sha_prefix = resource.filename.rsplit(".", 1)[0]
+
+    # For manual set_thumbnail, use the user-specified timestamp
+    thumb_filename = f"{sha_prefix}_thumb.jpg"
+    THUMBNAIL_DIR.mkdir(parents=True, exist_ok=True)
+    thumb_path = THUMBNAIL_DIR / thumb_filename
+    proc = await asyncio.create_subprocess_exec(
+        "ffmpeg",
+        "-ss", str(body.timestamp),
+        "-i", str(video_path),
+        "-frames:v", "1",
+        "-q:v", "2",
+        str(thumb_path),
+        "-y",
+        stdout=asyncio.subprocess.DEVNULL,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    await proc.communicate()
+    if proc.returncode != 0 or not thumb_path.is_file():
+        raise HTTPException(status_code=400, detail="FFmpeg extraction failed")
+
+    resource.thumbnail = thumb_filename
+    await db.commit()
+    await db.refresh(resource)
+    return resource
+
+
+@router.delete("/resources/{resource_id}/thumbnail", response_model=ResourceResponse)
+async def remove_thumbnail(resource_id: int, db: AsyncSession = Depends(get_db)):
+    resource = await db.get(Resource, resource_id)
+    if not resource or resource.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="Resource not found")
+
+    if resource.thumbnail:
+        thumb_path = THUMBNAIL_DIR / resource.thumbnail
+        if thumb_path.is_file():
+            thumb_path.unlink()
+        resource.thumbnail = None
+        await db.commit()
+        await db.refresh(resource)
+
     return resource

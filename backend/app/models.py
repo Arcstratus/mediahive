@@ -48,6 +48,7 @@ class Resource(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )
+    thumbnail: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
     deleted_at: Mapped[datetime | None] = mapped_column(
         DateTime, nullable=True, default=None
     )

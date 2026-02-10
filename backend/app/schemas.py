@@ -41,6 +41,7 @@ class ResourceResponse(BaseModel):
     filename: str | None
     title: str | None
     folder: str | None = None
+    thumbnail: str | None = None
     created_at: datetime
     tags: list[TagResponse] = []
 

@@ -16,6 +16,7 @@ interface Resource {
   url: string | null
   title: string | null
   folder: string | null
+  thumbnail: string | null
   tags: Tag[]
   created_at: string
 }
@@ -88,6 +89,11 @@ function getMediaUrl(resource: Resource): string {
   if (!resource.url) return ''
   const folder = resource.folder ? `${resource.folder}/` : ''
   return `${apiBase}/media/${folder}${resource.url}`
+}
+
+function getThumbnailUrl(resource: Resource): string {
+  if (!resource.thumbnail) return ''
+  return `${apiBase}/thumbnails/${resource.thumbnail}`
 }
 
 // Upload modal
@@ -188,6 +194,12 @@ async function onImported() {
                 <img
                   v-if="resource.type === 'image' && resource.url"
                   :src="getMediaUrl(resource)"
+                  :alt="resource.title ?? ''"
+                  class="size-full object-cover group-hover:scale-105 transition"
+                >
+                <img
+                  v-else-if="resource.thumbnail"
+                  :src="getThumbnailUrl(resource)"
                   :alt="resource.title ?? ''"
                   class="size-full object-cover group-hover:scale-105 transition"
                 >

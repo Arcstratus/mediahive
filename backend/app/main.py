@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.config import MEDIA_DIR
+from app.config import MEDIA_DIR, THUMBNAIL_DIR
 from app.database import lifespan
 from app.routers import bookmarks, health, imports, resources, stats, tags, trash
 
@@ -26,6 +26,8 @@ app.include_router(stats.router, prefix="/api")
 app.include_router(trash.router, prefix="/api")
 
 MEDIA_DIR.mkdir(parents=True, exist_ok=True)
+THUMBNAIL_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/api/thumbnails", StaticFiles(directory=THUMBNAIL_DIR), name="thumbnails")
 app.mount("/api/media", StaticFiles(directory=MEDIA_DIR), name="media")
 
 

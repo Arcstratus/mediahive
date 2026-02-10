@@ -30,6 +30,7 @@ async def lifespan(app):
             "ALTER TABLE resources RENAME COLUMN url TO filename",
             "CREATE UNIQUE INDEX IF NOT EXISTS ix_resources_filename ON resources(filename)",
             "ALTER TABLE resources ADD COLUMN deleted_at DATETIME",
+            "ALTER TABLE resources ADD COLUMN thumbnail VARCHAR",
         ]:
             try:
                 await conn.execute(text(stmt))

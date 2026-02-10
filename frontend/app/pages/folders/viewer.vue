@@ -15,6 +15,7 @@ interface Resource {
   filename: string | null
   title: string | null
   folder: string | null
+  thumbnail: string | null
   tags: Tag[]
   created_at: string
 }
@@ -68,6 +69,11 @@ async function fetchResource(id: number) {
 function getMediaUrl(res: Resource): string {
   if (!res.filename) return ''
   return `${apiBase}/media/${res.folder ? res.folder + '/' : ''}${res.filename}`
+}
+
+function getThumbnailUrl(res: Resource): string {
+  if (!res.thumbnail) return ''
+  return `${apiBase}/thumbnails/${res.thumbnail}`
 }
 
 function preloadMedia(res: Resource) {
@@ -207,6 +213,7 @@ async function saveForm() {
             v-else
             :key="resource.id"
             controls
+            :poster="resource.thumbnail ? getThumbnailUrl(resource) : undefined"
             :src="getMediaUrl(resource)"
             class="max-h-[70vh] max-w-full"
           />

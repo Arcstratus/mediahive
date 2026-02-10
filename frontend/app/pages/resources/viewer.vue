@@ -15,6 +15,7 @@ interface Resource {
   filename: string | null
   title: string | null
   folder: string | null
+  thumbnail: string | null
   tags: Tag[]
   created_at: string
 }
@@ -28,6 +29,8 @@ const currentId = ref<number | null>(null)
 const resource = ref<Resource | null>(null)
 const form = reactive({ title: '', folder: '', tags: [] as string[] })
 const saving = ref(false)
+const videoRef = ref<HTMLVideoElement | null>(null)
+const settingThumbnail = ref(false)
 
 const currentIndex = computed(() => {
   if (currentId.value === null) return -1
@@ -167,6 +170,42 @@ async function saveForm() {
     saving.value = false
   }
 }
+
+function getThumbnailUrl(res: Resource): string {
+  if (!res.thumbnail) return ''
+  return `${apiBase}/thumbnails/${res.thumbnail}`
+}
+
+async function setThumbnail() {
+  if (!currentId.value || !videoRef.value) return
+  settingThumbnail.value = true
+  try {
+    const updated = await $fetch<Resource>(`${apiBase}/resources/${currentId.value}/thumbnail`, {
+      method: 'POST',
+      body: { timestamp: videoRef.value.currentTime },
+    })
+    resource.value = updated
+    resourceCache.set(currentId.value, updated)
+  }
+  finally {
+    settingThumbnail.value = false
+  }
+}
+
+async function removeThumbnail() {
+  if (!currentId.value) return
+  settingThumbnail.value = true
+  try {
+    const updated = await $fetch<Resource>(`${apiBase}/resources/${currentId.value}/thumbnail`, {
+      method: 'DELETE',
+    })
+    resource.value = updated
+    resourceCache.set(currentId.value, updated)
+  }
+  finally {
+    settingThumbnail.value = false
+  }
+}
 </script>
 
 <template>
@@ -193,8 +232,10 @@ async function saveForm() {
           >
           <video
             v-else
+            ref="videoRef"
             :key="resource.id"
             controls
+            :poster="resource.thumbnail ? getThumbnailUrl(resource) : undefined"
             :src="getMediaUrl(resource)"
             class="max-h-[70vh] max-w-full"
           />
@@ -205,6 +246,10 @@ async function saveForm() {
           <span class="text-sm text-gray-500">{{ currentIndex + 1 }} / {{ totalCount }}</span>
           <UButton icon="i-lucide-chevron-right" variant="outline" color="neutral" :disabled="currentIndex >= ids.length - 1" @click="next" />
         </div>
+
+        <div v-if="resource.category === 'video'" class="flex items-center justify-center">
+          <UButton label="Set as Thumbnail" icon="i-lucide-camera" variant="soft" :loading="settingThumbnail" @click="setThumbnail" />
+        </div>
       </div>
 
       <div class="flex flex-col gap-4">
@@ -212,6 +257,11 @@ async function saveForm() {
           {{ resource.title || 'Untitled' }}
         </h2>
         <UBadge :label="resource.category" :color="resource.category === 'image' ? 'info' : 'warning'" variant="subtle" size="sm" class="w-fit" />
+        <div v-if="resource.thumbnail" class="flex flex-col gap-2">
+          <p class="text-sm font-medium text-muted">Thumbnail</p>
+          <img :src="getThumbnailUrl(resource)" alt="Thumbnail" class="rounded-lg w-full object-cover" />
+          <UButton label="Remove Thumbnail" icon="i-lucide-x" variant="soft" color="error" size="sm" :loading="settingThumbnail" @click="removeThumbnail" />
+        </div>
         <UFormField label="Title" name="title">
           <UInput v-model="form.title" placeholder="Title" class="w-full" />
         </UFormField>

@@ -17,6 +17,7 @@ interface Resource {
   filename: string | null
   title: string | null
   folder: string | null
+  thumbnail: string | null
   tags: Tag[]
   created_at: string
 }
@@ -87,6 +88,16 @@ function getExtension(filename: string | null): string {
   return dot >= 0 ? filename.slice(dot) : ''
 }
 
+function getMediaUrl(res: Resource): string {
+  if (!res.filename) return ''
+  return `${apiBase}/media/${res.folder ? res.folder + '/' : ''}${res.filename}`
+}
+
+function getThumbnailUrl(res: Resource): string {
+  if (!res.thumbnail) return ''
+  return `${apiBase}/thumbnails/${res.thumbnail}`
+}
+
 function sortHeader(label: string) {
   return ({ column }: { column: { getIsSorted: () => false | 'asc' | 'desc', toggleSorting: (asc: boolean) => void } }) => {
     const isSorted = column.getIsSorted()
@@ -134,6 +145,7 @@ const columns: TableColumn<Resource>[] = [
       'aria-label': 'Select row'
     })
   },
+  { id: 'preview', header: 'Preview', size: 80 },
   { accessorKey: 'title', header: sortHeader('Title'), maxSize: 300 },
   { id: 'category', accessorKey: 'category', header: 'Category' },
   { id: 'ext', accessorFn: row => getExtension(row.filename), header: sortHeader('Extension') },
@@ -408,6 +420,20 @@ async function onImported() {
     <!-- List View -->
     <template v-if="viewMode === 'list'">
       <UTable v-model:sorting="sorting" v-model:row-selection="rowSelection" :data="resources" :columns="columns" :sorting-options="{ manualSorting: true }" :get-row-id="(row: Resource) => String(row.id)">
+        <template #preview-cell="{ row }">
+          <img
+            v-if="row.original.category === 'image'"
+            :src="getMediaUrl(row.original)"
+            class="size-10 rounded object-cover"
+          >
+          <img
+            v-else-if="row.original.thumbnail"
+            :src="getThumbnailUrl(row.original)"
+            class="size-10 rounded object-cover"
+          >
+          <UIcon v-else name="i-lucide-video" class="size-10 text-muted" />
+        </template>
+
         <template #title-cell="{ row }">
           <span class="block max-w-xs truncate" :title="row.original.title ?? ''">{{ row.original.title }}</span>
         </template>
