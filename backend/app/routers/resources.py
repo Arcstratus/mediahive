@@ -11,6 +11,7 @@ from fastapi_error_map import ErrorAwareRouter
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import ALLOWED_EXTENSIONS
 from app.database import get_db
 from app.exceptions import ResourceNotFoundError, ResourceValidationError
 from app.schemas import (
@@ -136,7 +137,7 @@ async def download_resource(body: DownloadRequest, bg: BackgroundTasks):
     parsed = urlparse(body.url)
     ext = Path(parsed.path).suffix.lower()
 
-    if ext not in resource_service.ALLOWED_EXTENSIONS:
+    if ext not in ALLOWED_EXTENSIONS:
         raise ResourceValidationError(
             f"Unsupported URL extension: {ext or '(none)'}",
         )

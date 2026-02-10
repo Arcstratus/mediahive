@@ -47,8 +47,6 @@ SORTABLE_COLUMNS = {
     "created_at": Resource.created_at,
 }
 
-ALLOWED_EXTENSIONS = IMAGE_EXTENSIONS | VIDEO_EXTENSIONS | {".m3u8"}
-
 
 # ---------------------------------------------------------------------------
 # Resource CRUD
