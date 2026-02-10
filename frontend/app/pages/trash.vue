@@ -6,28 +6,26 @@ definePageMeta({
   layout: 'dashboard'
 })
 
-const { public: { apiBase } } = useRuntimeConfig()
+const trashApi = useTrashApi()
 
-const { data: items, refresh } = await useAsyncData<TrashItem[]>('trash', () =>
-  $fetch(`${apiBase}/trash`)
-)
+const { data: items, refresh } = await trashApi.list('trash')
 
 const trashItems = computed(() => items.value ?? [])
 
 async function restoreItem(id: number) {
-  await $fetch(`${apiBase}/trash/${id}/restore`, { method: 'POST' })
+  await trashApi.restore(id)
   await refresh()
 }
 
 async function deleteItem(id: number) {
   if (!confirm('Permanently delete this resource? This cannot be undone.')) return
-  await $fetch(`${apiBase}/trash/${id}`, { method: 'DELETE' })
+  await trashApi.remove(id)
   await refresh()
 }
 
 async function emptyTrash() {
   if (!confirm('Permanently delete all trashed resources? This cannot be undone.')) return
-  await $fetch(`${apiBase}/trash`, { method: 'DELETE' })
+  await trashApi.empty()
   await refresh()
 }
 

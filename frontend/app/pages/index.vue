@@ -1,25 +1,18 @@
 <script setup lang="ts">
-import type { Tag, Resource, PaginatedResponse, Stats } from '~/types'
 
 definePageMeta({
   layout: 'dashboard'
 })
 
-const { public: { apiBase } } = useRuntimeConfig()
+const resourcesApi = useResourcesApi()
+const tagsApi = useTagsApi()
+const statsApi = useStatsApi()
 
-const { data: stats, refresh: refreshStats } = await useAsyncData<Stats>('dashboard-stats', () =>
-  $fetch(`${apiBase}/stats`)
-)
+const { data: stats, refresh: refreshStats } = await statsApi.get('dashboard-stats')
 
-const { data: recentData, refresh: refreshRecent } = await useAsyncData<PaginatedResponse>('dashboard-recent', () =>
-  $fetch(`${apiBase}/resources`, {
-    query: { sort_by: 'created_at', sort_desc: true, per_page: 8 }
-  })
-)
+const { data: recentData, refresh: refreshRecent } = await resourcesApi.list('dashboard-recent', { sort_by: 'created_at', sort_desc: true, per_page: 8 })
 
-const { data: tags, refresh: refreshTags } = await useAsyncData<Tag[]>('dashboard-tags', () =>
-  $fetch(`${apiBase}/tags`)
-)
+const { data: tags, refresh: refreshTags } = await tagsApi.list('dashboard-tags')
 
 const recentResources = computed(() => recentData.value?.items ?? [])
 
@@ -51,16 +44,7 @@ const tagCloud = computed(() => {
   }))
 })
 
-function getMediaUrl(resource: Resource): string {
-  if (!resource.filename) return ''
-  const folder = resource.folder ? `${resource.folder}/` : ''
-  return `${apiBase}/media/${folder}${resource.filename}`
-}
-
-function getThumbnailUrl(resource: Resource): string {
-  if (!resource.thumbnail) return ''
-  return `${apiBase}/thumbnails/${resource.thumbnail}`
-}
+const { public: { apiBase } } = useRuntimeConfig()
 
 // Upload modal
 const uploadOpen = ref(false)
@@ -89,10 +73,7 @@ async function submitUpload() {
     formData.append('file', uploadFile.value)
     if (uploadForm.title) formData.append('title', uploadForm.title)
     if (uploadForm.tags.length) formData.append('tags', uploadForm.tags.join(','))
-    await $fetch(`${apiBase}/resources/upload`, {
-      method: 'POST',
-      body: formData,
-    })
+    await resourcesApi.upload(formData)
     uploadOpen.value = false
     await Promise.all([refreshStats(), refreshRecent(), refreshTags()])
   }
@@ -159,13 +140,13 @@ async function onImported() {
               <div class="aspect-square rounded-lg bg-elevated overflow-hidden flex items-center justify-center">
                 <img
                   v-if="resource.category === 'image' && resource.filename"
-                  :src="getMediaUrl(resource)"
+                  :src="`${apiBase}/media/${resource.folder ? resource.folder + '/' : ''}${resource.filename}`"
                   :alt="resource.title ?? ''"
                   class="size-full object-cover group-hover:scale-105 transition"
                 >
                 <img
                   v-else-if="resource.thumbnail"
-                  :src="getThumbnailUrl(resource)"
+                  :src="`${apiBase}/thumbnails/${resource.thumbnail}`"
                   :alt="resource.title ?? ''"
                   class="size-full object-cover group-hover:scale-105 transition"
                 >

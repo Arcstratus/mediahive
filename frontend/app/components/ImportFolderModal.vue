@@ -8,7 +8,7 @@ const emit = defineEmits<{
   imported: [result: ImportResult]
 }>()
 
-const { public: { apiBase } } = useRuntimeConfig()
+const importsApi = useImportsApi()
 
 const folderPath = ref('')
 const scannedFiles = ref<ScannedFile[]>([])
@@ -52,10 +52,7 @@ watch(open, (val) => {
 async function scanFolder() {
   scanning.value = true
   try {
-    const res = await $fetch<{ files: ScannedFile[] }>(`${apiBase}/imports/scan`, {
-      method: 'POST',
-      body: { path: folderPath.value }
-    })
+    const res = await importsApi.scan(folderPath.value)
     scannedFiles.value = res.files
     scanned.value = true
   }
@@ -70,12 +67,7 @@ async function scanFolder() {
 async function executeImport() {
   importing.value = true
   try {
-    const res = await $fetch<ImportResult>(`${apiBase}/imports/execute`, {
-      method: 'POST',
-      body: {
-        files: scannedFiles.value.map(f => ({ path: f.path, type: f.type }))
-      }
-    })
+    const res = await importsApi.execute(scannedFiles.value.map(f => ({ path: f.path, type: f.type })))
     importResult.value = res
     emit('imported', res)
   }

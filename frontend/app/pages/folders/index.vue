@@ -1,13 +1,11 @@
 <script setup lang="ts">
-import type { FolderInfo } from '~/types'
-
 definePageMeta({
   layout: 'dashboard'
 })
 
-const { public: { apiBase } } = useRuntimeConfig()
+const resourcesApi = useResourcesApi()
 
-const { data: folders } = await useFetch<FolderInfo[]>(`${apiBase}/resources/folders`)
+const { data: folders } = await resourcesApi.getFolders('folders')
 
 const search = ref('')
 

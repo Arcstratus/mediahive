@@ -6,6 +6,7 @@ definePageMeta({
 })
 
 const { public: { apiBase } } = useRuntimeConfig()
+const resourcesApi = useResourcesApi()
 const route = useRoute()
 const router = useRouter()
 
@@ -31,9 +32,7 @@ const preloadedVideos = new Set<string>()
 
 async function fetchIds() {
   if (!folder.value) return
-  ids.value = await $fetch<number[]>(`${apiBase}/resources/ids`, {
-    params: { folder: folder.value }
-  })
+  ids.value = await resourcesApi.getIds({ folder: folder.value })
 }
 
 async function fetchResource(id: number) {
@@ -42,7 +41,7 @@ async function fetchResource(id: number) {
     resource.value = cached
   }
   else {
-    const data = await $fetch<Resource>(`${apiBase}/resources/${id}`)
+    const data = await resourcesApi.get(id)
     resourceCache.set(id, data)
     resource.value = data
   }
@@ -51,19 +50,10 @@ async function fetchResource(id: number) {
   form.tags = resource.value.tags.map(t => t.name)
 }
 
-function getMediaUrl(res: Resource): string {
-  if (!res.filename) return ''
-  return `${apiBase}/media/${res.folder ? res.folder + '/' : ''}${res.filename}`
-}
-
-function getThumbnailUrl(res: Resource): string {
-  if (!res.thumbnail) return ''
-  return `${apiBase}/thumbnails/${res.thumbnail}`
-}
-
 function preloadMedia(res: Resource) {
   if (!res.filename) return
-  const fullUrl = getMediaUrl(res)
+  const folder = res.folder ? `${res.folder}/` : ''
+  const fullUrl = `${apiBase}/media/${folder}${res.filename}`
   if (res.category === 'image') {
     if (imageCache.has(fullUrl)) return
     const img = new Image()
@@ -80,7 +70,7 @@ function preloadMedia(res: Resource) {
 async function preloadResource(id: number) {
   if (!resourceCache.has(id)) {
     try {
-      const data = await $fetch<Resource>(`${apiBase}/resources/${id}`)
+      const data = await resourcesApi.get(id)
       resourceCache.set(id, data)
     }
     catch { return }
@@ -138,7 +128,7 @@ onUnmounted(() => {
 async function deleteResource() {
   if (!currentId.value) return
   if (!confirm('Are you sure you want to delete this resource?')) return
-  await $fetch(`${apiBase}/resources/${currentId.value}`, { method: 'DELETE' })
+  await resourcesApi.remove(currentId.value)
   const idx = currentIndex.value
   ids.value.splice(idx, 1)
   resourceCache.delete(currentId.value)
@@ -154,10 +144,7 @@ async function saveForm() {
   if (!currentId.value) return
   saving.value = true
   try {
-    const updated = await $fetch<Resource>(`${apiBase}/resources/${currentId.value}`, {
-      method: 'PUT',
-      body: { title: form.title, folder: form.folder || null, tags: form.tags }
-    })
+    const updated = await resourcesApi.update(currentId.value, { title: form.title, folder: form.folder || null, tags: form.tags })
     resource.value = updated
     resourceCache.set(currentId.value, updated)
   }
@@ -190,7 +177,7 @@ async function saveForm() {
         <div class="flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg min-h-[400px]">
           <img
             v-if="resource.category === 'image'"
-            :src="getMediaUrl(resource)"
+            :src="`${apiBase}/media/${resource.folder ? resource.folder + '/' : ''}${resource.filename}`"
             :alt="resource.title ?? ''"
             class="max-h-[70vh] max-w-full object-contain"
           >
@@ -198,8 +185,8 @@ async function saveForm() {
             v-else
             :key="resource.id"
             controls
-            :poster="resource.thumbnail ? getThumbnailUrl(resource) : undefined"
-            :src="getMediaUrl(resource)"
+            :poster="resource.thumbnail ? `${apiBase}/thumbnails/${resource.thumbnail}` : undefined"
+            :src="`${apiBase}/media/${resource.folder ? resource.folder + '/' : ''}${resource.filename}`"
             class="max-h-[70vh] max-w-full"
           />
         </div>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { TableColumn, TreeItem } from '@nuxt/ui'
-import type { Tag, Resource, PaginatedResponse, FolderNode } from '~/types'
+import type { Resource, FolderNode } from '~/types'
 
 definePageMeta({
   layout: 'dashboard'
@@ -12,6 +12,8 @@ const ALL_EXTENSIONS = [
 ]
 
 const { public: { apiBase } } = useRuntimeConfig()
+const resourcesApi = useResourcesApi()
+const tagsApi = useTagsApi()
 
 const viewMode = ref<'list' | 'tree'>('tree')
 const page = ref(1)
@@ -25,32 +27,26 @@ const extOptions = computed(() =>
   ALL_EXTENSIONS.map(e => ({ label: e, value: e }))
 )
 
-const { data: allTags, refresh: refreshTags } = await useAsyncData<Tag[]>('resource-tags', () =>
-  $fetch(`${apiBase}/tags`)
-)
+const { data: allTags, refresh: refreshTags } = await tagsApi.list('resource-tags')
 
 const tagFilterOptions = computed(() =>
   (allTags.value ?? []).map(t => ({ label: t.name, value: t.name }))
 )
 
-const { data, refresh } = await useAsyncData<PaginatedResponse>(
-  'all-resources',
-  () => {
-    const query: Record<string, unknown> = {
-      page: viewMode.value === 'tree' ? 1 : page.value,
-      per_page: viewMode.value === 'tree' ? 100 : perPage
-    }
-    if (filterSearch.value) query.search = filterSearch.value
-    if (filterTags.value.length) query.tag = filterTags.value
-    if (filterExt.value.length) query.ext = filterExt.value
-    if (sorting.value.length) {
-      query.sort_by = sorting.value[0].id
-      query.sort_desc = sorting.value[0].desc
-    }
-    return $fetch(`${apiBase}/resources`, { query })
-  },
-  { watch: [filterSearch, filterTags, filterExt, page, sorting, viewMode] }
-)
+const { data, refresh } = await resourcesApi.list('all-resources', () => {
+  const query: Record<string, unknown> = {
+    page: viewMode.value === 'tree' ? 1 : page.value,
+    per_page: viewMode.value === 'tree' ? 100 : perPage
+  }
+  if (filterSearch.value) query.search = filterSearch.value
+  if (filterTags.value.length) query.tag = filterTags.value
+  if (filterExt.value.length) query.ext = filterExt.value
+  if (sorting.value.length) {
+    query.sort_by = sorting.value[0].id
+    query.sort_desc = sorting.value[0].desc
+  }
+  return query
+}, { watch: [filterSearch, filterTags, filterExt, page, sorting, viewMode] })
 
 const resources = computed(() => data.value?.items ?? [])
 const total = computed(() => data.value?.total ?? 0)
@@ -58,16 +54,6 @@ const total = computed(() => data.value?.total ?? 0)
 watch([filterSearch, filterTags, filterExt], () => {
   page.value = 1
 })
-
-function getMediaUrl(res: Resource): string {
-  if (!res.filename) return ''
-  return `${apiBase}/media/${res.folder ? res.folder + '/' : ''}${res.filename}`
-}
-
-function getThumbnailUrl(res: Resource): string {
-  if (!res.thumbnail) return ''
-  return `${apiBase}/thumbnails/${res.thumbnail}`
-}
 
 function sortHeader(label: string) {
   return ({ column }: { column: { getIsSorted: () => false | 'asc' | 'desc', toggleSorting: (asc: boolean) => void } }) => {
@@ -92,10 +78,7 @@ const selectedCount = computed(() => Object.values(rowSelection.value).filter(Bo
 async function batchDelete() {
   if (!confirm(`Are you sure you want to delete ${selectedCount.value} selected resource(s)?`)) return
   const ids = Object.keys(rowSelection.value).filter(k => rowSelection.value[k]).map(Number)
-  await $fetch(`${apiBase}/resources/batch-delete`, {
-    method: 'POST',
-    body: { ids }
-  })
+  await resourcesApi.batchDelete(ids)
   rowSelection.value = {}
   await refresh()
 }
@@ -193,10 +176,7 @@ function openEdit(resource: Resource) {
 
 async function submitForm() {
   if (!editingResource.value) return
-  await $fetch(`${apiBase}/resources/${editingResource.value.id}`, {
-    method: 'PUT',
-    body: { title: form.title, folder: form.folder || null, tags: form.tags }
-  })
+  await resourcesApi.update(editingResource.value.id, { title: form.title, folder: form.folder || null, tags: form.tags })
   modalOpen.value = false
   await refresh()
   await refreshTags()
@@ -204,16 +184,13 @@ async function submitForm() {
 
 async function deleteResource(id: number) {
   if (!confirm('Are you sure you want to delete this resource?')) return
-  await $fetch(`${apiBase}/resources/${id}`, { method: 'DELETE' })
+  await resourcesApi.remove(id)
   await refresh()
 }
 
 async function removeTag(resource: Resource, tagName: string) {
   const updatedTags = resource.tags.filter(t => t.name !== tagName).map(t => t.name)
-  await $fetch(`${apiBase}/resources/${resource.id}`, {
-    method: 'PUT',
-    body: { tags: updatedTags }
-  })
+  await resourcesApi.update(resource.id, { tags: updatedTags })
   await refresh()
 }
 
@@ -244,10 +221,7 @@ async function submitUpload() {
     formData.append('file', uploadFile.value)
     if (uploadForm.title) formData.append('title', uploadForm.title)
     if (uploadForm.tags.length) formData.append('tags', uploadForm.tags.join(','))
-    await $fetch(`${apiBase}/resources/upload`, {
-      method: 'POST',
-      body: formData
-    })
+    await resourcesApi.upload(formData)
     uploadOpen.value = false
     await refresh()
     await refreshTags()
@@ -274,10 +248,7 @@ async function submitDownload() {
   if (!downloadUrl.value) return
   downloading.value = true
   try {
-    await $fetch(`${apiBase}/resources/download`, {
-      method: 'POST',
-      body: { url: downloadUrl.value }
-    })
+    await resourcesApi.download(downloadUrl.value)
     downloadOpen.value = false
     toast.add({ title: 'Download started', description: 'The file is being downloaded in the background.', color: 'info' })
   }
@@ -385,12 +356,12 @@ async function onImported() {
         <template #preview-cell="{ row }">
           <img
             v-if="row.original.category === 'image'"
-            :src="getMediaUrl(row.original)"
+            :src="`${apiBase}/media/${row.original.folder ? row.original.folder + '/' : ''}${row.original.filename}`"
             class="size-10 rounded object-cover"
           >
           <img
             v-else-if="row.original.thumbnail"
-            :src="getThumbnailUrl(row.original)"
+            :src="`${apiBase}/thumbnails/${row.original.thumbnail}`"
             class="size-10 rounded object-cover"
           >
           <UIcon v-else name="i-lucide-video" class="size-10 text-muted" />

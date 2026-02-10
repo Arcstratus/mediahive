@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import type { TableColumn, TreeItem } from '@nuxt/ui'
-import type { Tag, Bookmark, PaginatedResponse, FolderNode } from '~/types'
+import type { Bookmark, FolderNode } from '~/types'
 
 definePageMeta({
   layout: 'dashboard'
 })
 
-const { public: { apiBase } } = useRuntimeConfig()
+const bookmarksApi = useBookmarksApi()
+const tagsApi = useTagsApi()
 
 const viewMode = ref<'list' | 'tree'>('tree')
 const page = ref(1)
@@ -15,31 +16,25 @@ const filterSearch = ref('')
 const filterTags = ref<string[]>([])
 const sorting = ref<{ id: string, desc: boolean }[]>([])
 
-const { data: allTags, refresh: refreshTags } = await useAsyncData<Tag[]>('tags', () =>
-  $fetch(`${apiBase}/tags`)
-)
+const { data: allTags, refresh: refreshTags } = await tagsApi.list('tags')
 
 const tagFilterOptions = computed(() =>
   (allTags.value ?? []).map(t => ({ label: t.name, value: t.name }))
 )
 
-const { data, refresh } = await useAsyncData<PaginatedResponse>(
-  'bookmarks',
-  () => {
-    const query: Record<string, unknown> = {
-      page: viewMode.value === 'tree' ? 1 : page.value,
-      per_page: viewMode.value === 'tree' ? 100 : perPage
-    }
-    if (filterSearch.value) query.search = filterSearch.value
-    if (filterTags.value.length) query.tag = filterTags.value
-    if (sorting.value.length) {
-      query.sort_by = sorting.value[0].id
-      query.sort_desc = sorting.value[0].desc
-    }
-    return $fetch(`${apiBase}/bookmarks`, { query })
-  },
-  { watch: [filterSearch, filterTags, page, sorting, viewMode] }
-)
+const { data, refresh } = await bookmarksApi.list('bookmarks', () => {
+  const query: Record<string, unknown> = {
+    page: viewMode.value === 'tree' ? 1 : page.value,
+    per_page: viewMode.value === 'tree' ? 100 : perPage
+  }
+  if (filterSearch.value) query.search = filterSearch.value
+  if (filterTags.value.length) query.tag = filterTags.value
+  if (sorting.value.length) {
+    query.sort_by = sorting.value[0].id
+    query.sort_desc = sorting.value[0].desc
+  }
+  return query
+}, { watch: [filterSearch, filterTags, page, sorting, viewMode] })
 
 const bookmarks = computed(() => data.value?.items ?? [])
 const total = computed(() => data.value?.total ?? 0)
@@ -71,10 +66,7 @@ const selectedCount = computed(() => Object.values(rowSelection.value).filter(Bo
 async function batchDelete() {
   if (!confirm(`Are you sure you want to delete ${selectedCount.value} selected bookmark(s)?`)) return
   const ids = Object.keys(rowSelection.value).filter(k => rowSelection.value[k]).map(Number)
-  await $fetch(`${apiBase}/bookmarks/batch-delete`, {
-    method: 'POST',
-    body: { ids }
-  })
+  await bookmarksApi.batchDelete(ids)
   rowSelection.value = {}
   await refresh()
 }
@@ -177,16 +169,13 @@ async function onBookmarkSaved() {
 
 async function deleteBookmark(id: number) {
   if (!confirm('Are you sure you want to delete this bookmark?')) return
-  await $fetch(`${apiBase}/bookmarks/${id}`, { method: 'DELETE' })
+  await bookmarksApi.remove(id)
   await refresh()
 }
 
 async function removeTag(bookmark: Bookmark, tagName: string) {
   const updatedTags = bookmark.tags.filter(t => t.name !== tagName).map(t => t.name)
-  await $fetch(`${apiBase}/bookmarks/${bookmark.id}`, {
-    method: 'PUT',
-    body: { tags: updatedTags }
-  })
+  await bookmarksApi.update(bookmark.id, { tags: updatedTags })
   await refresh()
 }
 
@@ -202,10 +191,7 @@ async function importBookmarks() {
   importing.value = true
   try {
     for (const url of urls) {
-      await $fetch(`${apiBase}/bookmarks`, {
-        method: 'POST',
-        body: { title: url, url, folder: importFolder.value || null }
-      })
+      await bookmarksApi.create({ title: url, url, folder: importFolder.value || null })
     }
     importText.value = ''
     importFolder.value = ''

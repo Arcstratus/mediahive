@@ -6,11 +6,9 @@ definePageMeta({
   layout: 'dashboard'
 })
 
-const { public: { apiBase } } = useRuntimeConfig()
+const tagsApi = useTagsApi()
 
-const { data: tags, refresh } = await useAsyncData<Tag[]>('tags', () =>
-  $fetch(`${apiBase}/tags`)
-)
+const { data: tags, refresh } = await tagsApi.list('tags')
 
 const columns: TableColumn<Tag>[] = [
   { accessorKey: 'name', header: 'Name' },
@@ -29,17 +27,14 @@ function openCreate() {
 
 async function createTag() {
   if (!newTagName.value.trim()) return
-  await $fetch(`${apiBase}/tags`, {
-    method: 'POST',
-    body: { name: newTagName.value.trim() }
-  })
+  await tagsApi.create(newTagName.value.trim())
   modalOpen.value = false
   await refresh()
 }
 
 async function deleteTag(id: number) {
   if (!confirm('Are you sure you want to delete this tag?')) return
-  await $fetch(`${apiBase}/tags/${id}`, { method: 'DELETE' })
+  await tagsApi.remove(id)
   await refresh()
 }
 

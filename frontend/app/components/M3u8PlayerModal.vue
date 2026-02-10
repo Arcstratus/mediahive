@@ -3,7 +3,7 @@ import Hls from 'hls.js'
 
 const open = defineModel<boolean>('open', { default: false })
 
-const { public: { apiBase } } = useRuntimeConfig()
+const resourcesApi = useResourcesApi()
 const toast = useToast()
 
 const url = ref('')
@@ -72,10 +72,7 @@ async function downloadStream() {
   if (!url.value.trim()) return
   downloading.value = true
   try {
-    await $fetch(`${apiBase}/resources/download`, {
-      method: 'POST',
-      body: { url: url.value }
-    })
+    await resourcesApi.download(url.value)
     toast.add({ title: 'Download started', description: 'The stream is being downloaded in the background.', color: 'info' })
   } catch {
     toast.add({ title: 'Download failed', description: 'Failed to start download. Please try again.', color: 'error' })

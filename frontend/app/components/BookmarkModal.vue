@@ -11,7 +11,7 @@ const emit = defineEmits<{
   saved: []
 }>()
 
-const { public: { apiBase } } = useRuntimeConfig()
+const bookmarksApi = useBookmarksApi()
 
 const form = reactive({ title: '', url: '', description: '', folder: '', tags: [] as string[] })
 
@@ -36,17 +36,12 @@ watch(open, (val) => {
 })
 
 async function submit() {
+  const body = { title: form.title, url: form.url, description: form.description || null, folder: form.folder || null, tags: form.tags }
   if (props.bookmark) {
-    await $fetch(`${apiBase}/bookmarks/${props.bookmark.id}`, {
-      method: 'PUT',
-      body: { title: form.title, url: form.url, description: form.description || null, folder: form.folder || null, tags: form.tags }
-    })
+    await bookmarksApi.update(props.bookmark.id, body)
   }
   else {
-    await $fetch(`${apiBase}/bookmarks`, {
-      method: 'POST',
-      body: { title: form.title, url: form.url, description: form.description || null, folder: form.folder || null, tags: form.tags }
-    })
+    await bookmarksApi.create(body)
   }
   open.value = false
   emit('saved')
