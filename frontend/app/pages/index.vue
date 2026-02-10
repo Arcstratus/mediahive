@@ -1,39 +1,9 @@
 <script setup lang="ts">
+import type { Tag, Resource, PaginatedResponse, Stats } from '~/types'
+
 definePageMeta({
   layout: 'dashboard'
 })
-
-interface Tag {
-  id: number
-  name: string
-  created_at: string
-  resource_count: number
-}
-
-interface Resource {
-  id: number
-  type: string
-  url: string | null
-  title: string | null
-  folder: string | null
-  thumbnail: string | null
-  tags: Tag[]
-  created_at: string
-}
-
-interface PaginatedResponse {
-  items: Resource[]
-  total: number
-  page: number
-  per_page: number
-}
-
-interface Stats {
-  images: number
-  videos: number
-  bookmarks: number
-  tags: number
-}
 
 const { public: { apiBase } } = useRuntimeConfig()
 
@@ -86,9 +56,9 @@ function formatDate(dateStr: string) {
 }
 
 function getMediaUrl(resource: Resource): string {
-  if (!resource.url) return ''
+  if (!resource.filename) return ''
   const folder = resource.folder ? `${resource.folder}/` : ''
-  return `${apiBase}/media/${folder}${resource.url}`
+  return `${apiBase}/media/${folder}${resource.filename}`
 }
 
 function getThumbnailUrl(resource: Resource): string {
@@ -192,7 +162,7 @@ async function onImported() {
             >
               <div class="aspect-square rounded-lg bg-elevated overflow-hidden flex items-center justify-center">
                 <img
-                  v-if="resource.type === 'image' && resource.url"
+                  v-if="resource.category === 'image' && resource.filename"
                   :src="getMediaUrl(resource)"
                   :alt="resource.title ?? ''"
                   class="size-full object-cover group-hover:scale-105 transition"

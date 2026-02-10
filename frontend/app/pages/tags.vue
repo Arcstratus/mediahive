@@ -1,16 +1,10 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
+import type { Tag } from '~/types'
 
 definePageMeta({
   layout: 'dashboard'
 })
-
-interface Tag {
-  id: number
-  name: string
-  created_at: string
-  resource_count: number
-}
 
 const { public: { apiBase } } = useRuntimeConfig()
 

@@ -1,19 +1,10 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
+import type { TrashItem } from '~/types'
 
 definePageMeta({
   layout: 'dashboard'
 })
-
-interface TrashItem {
-  id: number
-  category: string
-  filename: string | null
-  title: string | null
-  folder: string | null
-  created_at: string
-  deleted_at: string | null
-}
 
 const { public: { apiBase } } = useRuntimeConfig()
 

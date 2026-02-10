@@ -1,32 +1,10 @@
 <script setup lang="ts">
 import type { TableColumn, TreeItem } from '@nuxt/ui'
+import type { Tag, Bookmark, PaginatedResponse, FolderNode } from '~/types'
 
 definePageMeta({
   layout: 'dashboard'
 })
-
-interface Tag {
-  id: number
-  name: string
-  created_at: string
-}
-
-interface Bookmark {
-  id: number
-  title: string
-  url: string
-  description: string | null
-  folder: string | null
-  tags: Tag[]
-  created_at: string
-}
-
-interface PaginatedResponse {
-  items: Bookmark[]
-  total: number
-  page: number
-  per_page: number
-}
 
 const { public: { apiBase } } = useRuntimeConfig()
 
@@ -127,31 +105,26 @@ const columns: TableColumn<Bookmark>[] = [
 ]
 
 // Tree view
-interface FolderNode {
-  children: Map<string, FolderNode>
-  bookmarks: Bookmark[]
-}
-
 function buildTree(items: Bookmark[]): TreeItem[] {
-  const root: FolderNode = { children: new Map(), bookmarks: [] }
+  const root: FolderNode<Bookmark> = { children: new Map(), items: [] }
 
   for (const bm of items) {
     if (!bm.folder) {
-      root.bookmarks.push(bm)
+      root.items.push(bm)
       continue
     }
     const parts = bm.folder.split('/').filter(Boolean)
     let node = root
     for (const part of parts) {
       if (!node.children.has(part)) {
-        node.children.set(part, { children: new Map(), bookmarks: [] })
+        node.children.set(part, { children: new Map(), items: [] })
       }
       node = node.children.get(part)!
     }
-    node.bookmarks.push(bm)
+    node.items.push(bm)
   }
 
-  function toTreeItems(node: FolderNode): TreeItem[] {
+  function toTreeItems(node: FolderNode<Bookmark>): TreeItem[] {
     const result: TreeItem[] = []
     const sortedFolders = [...node.children.entries()].sort((a, b) => a[0].localeCompare(b[0]))
     for (const [name, child] of sortedFolders) {
@@ -162,7 +135,7 @@ function buildTree(items: Bookmark[]): TreeItem[] {
         children: toTreeItems(child),
       })
     }
-    for (const bm of node.bookmarks) {
+    for (const bm of node.items) {
       result.push({
         label: bm.title || bm.url,
         icon: 'i-lucide-bookmark',

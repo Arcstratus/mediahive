@@ -1,17 +1,11 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
-
-interface ScannedFile {
-  path: string
-  name: string
-  type: 'image' | 'video'
-  size: number
-}
+import type { ScannedFile, ImportResult } from '~/types'
 
 const open = defineModel<boolean>('open', { default: false })
 
 const emit = defineEmits<{
-  imported: [result: { imported: number, skipped: number }]
+  imported: [result: ImportResult]
 }>()
 
 const { public: { apiBase } } = useRuntimeConfig()
@@ -21,7 +15,7 @@ const scannedFiles = ref<ScannedFile[]>([])
 const scanned = ref(false)
 const scanning = ref(false)
 const importing = ref(false)
-const importResult = ref<{ imported: number, skipped: number } | null>(null)
+const importResult = ref<ImportResult | null>(null)
 
 const fileColumns: TableColumn<ScannedFile>[] = [
   {
@@ -82,7 +76,7 @@ async function scanFolder() {
 async function executeImport() {
   importing.value = true
   try {
-    const res = await $fetch<{ imported: number, skipped: number }>(`${apiBase}/imports/execute`, {
+    const res = await $fetch<ImportResult>(`${apiBase}/imports/execute`, {
       method: 'POST',
       body: {
         files: scannedFiles.value.map(f => ({ path: f.path, type: f.type }))

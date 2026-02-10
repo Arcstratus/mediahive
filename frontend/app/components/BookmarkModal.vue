@@ -1,17 +1,5 @@
 <script setup lang="ts">
-interface Tag {
-  id: number
-  name: string
-}
-
-interface Bookmark {
-  id: number
-  title: string
-  url: string
-  description: string | null
-  folder: string | null
-  tags: Tag[]
-}
+import type { Bookmark } from '~/types'
 
 const open = defineModel<boolean>('open', { default: false })
 

@@ -1,33 +1,10 @@
 <script setup lang="ts">
 import type { TableColumn, TreeItem } from '@nuxt/ui'
+import type { Tag, Resource, PaginatedResponse, FolderNode } from '~/types'
 
 definePageMeta({
   layout: 'dashboard'
 })
-
-interface Tag {
-  id: number
-  name: string
-  created_at: string
-}
-
-interface Resource {
-  id: number
-  category: string
-  filename: string | null
-  title: string | null
-  folder: string | null
-  thumbnail: string | null
-  tags: Tag[]
-  created_at: string
-}
-
-interface PaginatedResponse {
-  items: Resource[]
-  total: number
-  page: number
-  per_page: number
-}
 
 const ALL_EXTENSIONS = [
   '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tiff', '.svg',
@@ -156,31 +133,26 @@ const columns: TableColumn<Resource>[] = [
 ]
 
 // Tree view
-interface FolderNode {
-  children: Map<string, FolderNode>
-  resources: Resource[]
-}
-
 function buildTree(items: Resource[]): TreeItem[] {
-  const root: FolderNode = { children: new Map(), resources: [] }
+  const root: FolderNode<Resource> = { children: new Map(), items: [] }
 
   for (const res of items) {
     if (!res.folder) {
-      root.resources.push(res)
+      root.items.push(res)
       continue
     }
     const parts = res.folder.split('/').filter(Boolean)
     let node = root
     for (const part of parts) {
       if (!node.children.has(part)) {
-        node.children.set(part, { children: new Map(), resources: [] })
+        node.children.set(part, { children: new Map(), items: [] })
       }
       node = node.children.get(part)!
     }
-    node.resources.push(res)
+    node.items.push(res)
   }
 
-  function toTreeItems(node: FolderNode): TreeItem[] {
+  function toTreeItems(node: FolderNode<Resource>): TreeItem[] {
     const result: TreeItem[] = []
     const sortedFolders = [...node.children.entries()].sort((a, b) => a[0].localeCompare(b[0]))
     for (const [name, child] of sortedFolders) {
@@ -191,7 +163,7 @@ function buildTree(items: Resource[]): TreeItem[] {
         children: toTreeItems(child),
       })
     }
-    for (const res of node.resources) {
+    for (const res of node.items) {
       result.push({
         label: res.title || res.filename || 'Untitled',
         icon: res.category === 'image' ? 'i-lucide-image' : 'i-lucide-video',

@@ -1,24 +1,9 @@
 <script setup lang="ts">
+import type { Resource } from '~/types'
+
 definePageMeta({
   layout: 'dashboard'
 })
-
-interface Tag {
-  id: number
-  name: string
-  created_at: string
-}
-
-interface Resource {
-  id: number
-  category: string
-  filename: string | null
-  title: string | null
-  folder: string | null
-  thumbnail: string | null
-  tags: Tag[]
-  created_at: string
-}
 
 const { public: { apiBase } } = useRuntimeConfig()
 const route = useRoute()

@@ -1,12 +1,9 @@
 <script setup lang="ts">
+import type { FolderInfo } from '~/types'
+
 definePageMeta({
   layout: 'dashboard'
 })
-
-interface FolderInfo {
-  folder: string
-  count: number
-}
 
 const { public: { apiBase } } = useRuntimeConfig()
 
