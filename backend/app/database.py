@@ -31,6 +31,7 @@ async def lifespan(app):
             "CREATE UNIQUE INDEX IF NOT EXISTS ix_resources_filename ON resources(filename)",
             "ALTER TABLE resources ADD COLUMN deleted_at DATETIME",
             "ALTER TABLE resources ADD COLUMN thumbnail VARCHAR",
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_bookmarks_url ON bookmarks(url)",
         ]:
             try:
                 await conn.execute(text(stmt))
