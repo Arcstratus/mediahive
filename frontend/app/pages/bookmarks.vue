@@ -8,6 +8,7 @@ definePageMeta({
 
 const bookmarksApi = useBookmarksApi()
 const tagsApi = useTagsApi()
+const toast = useToast()
 
 const viewMode = ref<'list' | 'tree'>('tree')
 const page = ref(1)
@@ -66,7 +67,8 @@ const selectedCount = computed(() => Object.values(rowSelection.value).filter(Bo
 async function batchDelete() {
   if (!confirm(`Are you sure you want to delete ${selectedCount.value} selected bookmark(s)?`)) return
   const ids = Object.keys(rowSelection.value).filter(k => rowSelection.value[k]).map(Number)
-  await bookmarksApi.batchDelete(ids)
+  const { error } = await bookmarksApi.batchDelete(ids)
+  if (error) { toast.add({ title: error, color: 'error' }); return }
   rowSelection.value = {}
   await refresh()
 }
@@ -170,13 +172,15 @@ async function onRefreshAll() {
 
 async function deleteBookmark(id: number) {
   if (!confirm('Are you sure you want to delete this bookmark?')) return
-  await bookmarksApi.remove(id)
+  const { error } = await bookmarksApi.remove(id)
+  if (error) { toast.add({ title: error, color: 'error' }); return }
   await refresh()
 }
 
 async function removeTag(bookmark: Bookmark, tagName: string) {
   const updatedTags = bookmark.tags.filter(t => t.name !== tagName).map(t => t.name)
-  await bookmarksApi.update(bookmark.id, { tags: updatedTags })
+  const { error } = await bookmarksApi.update(bookmark.id, { tags: updatedTags })
+  if (error) { toast.add({ title: error, color: 'error' }); return }
   await refresh()
 }
 </script>

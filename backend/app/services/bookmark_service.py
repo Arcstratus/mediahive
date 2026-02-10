@@ -1,7 +1,9 @@
-from fastapi import HTTPException
 from sqlalchemy import asc, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from sqlalchemy.exc import IntegrityError
+
+from app.exceptions import BookmarkAlreadyExistsError, BookmarkNotFoundError
 from app.models import Bookmark, Tag, bookmark_tags
 from app.schemas import BookmarkCreate, BookmarkUpdate
 from app.services import tag_service
@@ -23,7 +25,11 @@ async def create_bookmark(db: AsyncSession, body: BookmarkCreate) -> Bookmark:
     if body.tags:
         bookmark.tags = await tag_service.resolve_tags(db, body.tags)
     db.add(bookmark)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise BookmarkAlreadyExistsError("Bookmark with this URL already exists")
     await db.refresh(bookmark)
     return bookmark
 
@@ -31,8 +37,19 @@ async def create_bookmark(db: AsyncSession, body: BookmarkCreate) -> Bookmark:
 async def batch_create_bookmarks(
     db: AsyncSession, items: list[BookmarkCreate]
 ) -> list[Bookmark]:
+    existing_urls = set(
+        (await db.scalars(
+            select(Bookmark.url).where(
+                Bookmark.url.in_([b.url for b in items])
+            )
+        )).all()
+    )
+    seen_urls: set[str] = set()
     bookmarks = []
     for body in items:
+        if body.url in existing_urls or body.url in seen_urls:
+            continue
+        seen_urls.add(body.url)
         bookmark = Bookmark(
             title=body.title,
             url=body.url,
@@ -95,7 +112,7 @@ async def list_bookmarks(
 async def get_bookmark(db: AsyncSession, bookmark_id: int) -> Bookmark:
     bookmark = await db.get(Bookmark, bookmark_id)
     if not bookmark:
-        raise HTTPException(status_code=404, detail="Bookmark not found")
+        raise BookmarkNotFoundError("Bookmark not found")
     return bookmark
 
 
@@ -104,7 +121,7 @@ async def update_bookmark(
 ) -> Bookmark:
     bookmark = await db.get(Bookmark, bookmark_id)
     if not bookmark:
-        raise HTTPException(status_code=404, detail="Bookmark not found")
+        raise BookmarkNotFoundError("Bookmark not found")
     update_data = body.model_dump(exclude_unset=True)
     tags_data = update_data.pop("tags", None)
 
@@ -121,7 +138,7 @@ async def update_bookmark(
 async def delete_bookmark(db: AsyncSession, bookmark_id: int) -> None:
     bookmark = await db.get(Bookmark, bookmark_id)
     if not bookmark:
-        raise HTTPException(status_code=404, detail="Bookmark not found")
+        raise BookmarkNotFoundError("Bookmark not found")
     await db.delete(bookmark)
     await db.commit()
 

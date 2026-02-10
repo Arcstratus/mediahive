@@ -12,6 +12,7 @@ const emit = defineEmits<{
 }>()
 
 const bookmarksApi = useBookmarksApi()
+const toast = useToast()
 
 const form = reactive({ title: '', url: '', description: '', folder: '', tags: [] as string[] })
 
@@ -37,12 +38,10 @@ watch(open, (val) => {
 
 async function submit() {
   const body = { title: form.title, url: form.url, description: form.description || null, folder: form.folder || null, tags: form.tags }
-  if (props.bookmark) {
-    await bookmarksApi.update(props.bookmark.id, body)
-  }
-  else {
-    await bookmarksApi.create(body)
-  }
+  const { error } = props.bookmark
+    ? await bookmarksApi.update(props.bookmark.id, body)
+    : await bookmarksApi.create(body)
+  if (error) { toast.add({ title: error, color: 'error' }); return }
   open.value = false
   emit('saved')
 }

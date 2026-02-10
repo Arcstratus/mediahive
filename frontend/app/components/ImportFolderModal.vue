@@ -9,6 +9,7 @@ const emit = defineEmits<{
 }>()
 
 const importsApi = useImportsApi()
+const toast = useToast()
 
 const folderPath = ref('')
 const scannedFiles = ref<ScannedFile[]>([])
@@ -51,32 +52,20 @@ watch(open, (val) => {
 
 async function scanFolder() {
   scanning.value = true
-  try {
-    const res = await importsApi.scan(folderPath.value)
-    scannedFiles.value = res.files
-    scanned.value = true
-  }
-  catch (err) {
-    console.error('Scan failed:', err)
-  }
-  finally {
-    scanning.value = false
-  }
+  const { data, error } = await importsApi.scan(folderPath.value)
+  scanning.value = false
+  if (error) { toast.add({ title: error, color: 'error' }); return }
+  scannedFiles.value = data!.files
+  scanned.value = true
 }
 
 async function executeImport() {
   importing.value = true
-  try {
-    const res = await importsApi.execute(scannedFiles.value.map(f => ({ path: f.path, type: f.type })))
-    importResult.value = res
-    emit('imported', res)
-  }
-  catch (err) {
-    console.error('Import failed:', err)
-  }
-  finally {
-    importing.value = false
-  }
+  const { data, error } = await importsApi.execute(scannedFiles.value.map(f => ({ path: f.path, type: f.type })))
+  importing.value = false
+  if (error) { toast.add({ title: error, color: 'error' }); return }
+  importResult.value = data!
+  emit('imported', data!)
 }
 </script>
 

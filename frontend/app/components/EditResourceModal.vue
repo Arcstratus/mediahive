@@ -12,6 +12,7 @@ const emit = defineEmits<{
 }>()
 
 const resourcesApi = useResourcesApi()
+const toast = useToast()
 
 const form = reactive({ title: '', folder: '', tags: [] as string[] })
 
@@ -26,7 +27,8 @@ watch(open, (val) => {
 
 async function submit() {
   if (!props.resource) return
-  await resourcesApi.update(props.resource.id, { title: form.title, folder: form.folder || null, tags: form.tags })
+  const { error } = await resourcesApi.update(props.resource.id, { title: form.title, folder: form.folder || null, tags: form.tags })
+  if (error) { toast.add({ title: error, color: 'error' }); return }
   open.value = false
   emit('saved')
 }

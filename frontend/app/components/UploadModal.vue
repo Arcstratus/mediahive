@@ -6,6 +6,7 @@ const emit = defineEmits<{
 }>()
 
 const resourcesApi = useResourcesApi()
+const toast = useToast()
 
 const file = ref<File | null>(null)
 const form = reactive({ title: '', tags: [] as string[] })
@@ -27,18 +28,15 @@ function onFileChange(e: Event) {
 async function submit() {
   if (!file.value) return
   uploading.value = true
-  try {
-    const formData = new FormData()
-    formData.append('file', file.value)
-    if (form.title) formData.append('title', form.title)
-    if (form.tags.length) formData.append('tags', form.tags.join(','))
-    await resourcesApi.upload(formData)
-    open.value = false
-    emit('uploaded')
-  }
-  finally {
-    uploading.value = false
-  }
+  const formData = new FormData()
+  formData.append('file', file.value)
+  if (form.title) formData.append('title', form.title)
+  if (form.tags.length) formData.append('tags', form.tags.join(','))
+  const { error } = await resourcesApi.upload(formData)
+  uploading.value = false
+  if (error) { toast.add({ title: error, color: 'error' }); return }
+  open.value = false
+  emit('uploaded')
 }
 </script>
 

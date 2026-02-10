@@ -1,19 +1,22 @@
 import type { TrashItem } from '~/types'
 
 export function useTrashApi() {
-  const { public: { apiBase } } = useRuntimeConfig()
+  const api = useApiFetch()
 
   return {
     list: (key: string) =>
-      useAsyncData(key, () => $fetch<TrashItem[]>(`${apiBase}/trash`)),
+      useAsyncData(key, async () => {
+        const { data } = await api<TrashItem[]>('/trash')
+        return data
+      }),
 
     restore: (id: number) =>
-      $fetch<void>(`${apiBase}/trash/${id}/restore`, { method: 'POST' }),
+      api<void>(`/trash/${id}/restore`, { method: 'POST' }),
 
     remove: (id: number) =>
-      $fetch<void>(`${apiBase}/trash/${id}`, { method: 'DELETE' }),
+      api<void>(`/trash/${id}`, { method: 'DELETE' }),
 
     empty: () =>
-      $fetch<void>(`${apiBase}/trash`, { method: 'DELETE' }),
+      api<void>('/trash', { method: 'DELETE' }),
   }
 }

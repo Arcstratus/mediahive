@@ -20,15 +20,12 @@ watch(open, (val) => {
 async function submit() {
   if (!url.value) return
   downloading.value = true
-  try {
-    await resourcesApi.download(url.value)
-    open.value = false
-    toast.add({ title: 'Download started', description: 'The file is being downloaded in the background.', color: 'info' })
-    emit('downloaded')
-  }
-  finally {
-    downloading.value = false
-  }
+  const { error } = await resourcesApi.download(url.value)
+  downloading.value = false
+  if (error) { toast.add({ title: error, color: 'error' }); return }
+  open.value = false
+  toast.add({ title: 'Download started', description: 'The file is being downloaded in the background.', color: 'info' })
+  emit('downloaded')
 }
 </script>
 

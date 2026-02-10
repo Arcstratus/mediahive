@@ -6,6 +6,7 @@ const emit = defineEmits<{
 }>()
 
 const bookmarksApi = useBookmarksApi()
+const toast = useToast()
 
 const importText = ref('')
 const importFolder = ref('')
@@ -22,15 +23,12 @@ async function submit() {
   const urls = importText.value.split('\n').map(u => u.trim()).filter(Boolean)
   if (urls.length === 0) return
   importing.value = true
-  try {
-    const items = urls.map(url => ({ title: url, url, folder: importFolder.value || null }))
-    await bookmarksApi.batchCreate(items)
-    open.value = false
-    emit('imported')
-  }
-  finally {
-    importing.value = false
-  }
+  const items = urls.map(url => ({ title: url, url, folder: importFolder.value || null }))
+  const { error } = await bookmarksApi.batchCreate(items)
+  importing.value = false
+  if (error) { toast.add({ title: error, color: 'error' }); return }
+  open.value = false
+  emit('imported')
 }
 </script>
 

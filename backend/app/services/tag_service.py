@@ -1,7 +1,7 @@
-from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.exceptions import TagAlreadyExistsError, TagNotFoundError
 from app.models import Tag, bookmark_tags, resource_tags
 from app.schemas import TagResponse
 
@@ -22,7 +22,7 @@ async def resolve_tags(db: AsyncSession, tag_names: list[str]) -> list[Tag]:
 async def create_tag(db: AsyncSession, name: str) -> Tag:
     existing = await db.scalar(select(Tag).where(Tag.name == name))
     if existing:
-        raise HTTPException(status_code=409, detail="Tag already exists")
+        raise TagAlreadyExistsError("Tag already exists")
     tag = Tag(name=name)
     db.add(tag)
     await db.commit()
@@ -33,10 +33,10 @@ async def create_tag(db: AsyncSession, name: str) -> Tag:
 async def update_tag(db: AsyncSession, tag_id: int, name: str) -> Tag:
     tag = await db.get(Tag, tag_id)
     if not tag:
-        raise HTTPException(status_code=404, detail="Tag not found")
+        raise TagNotFoundError("Tag not found")
     existing = await db.scalar(select(Tag).where(Tag.name == name, Tag.id != tag_id))
     if existing:
-        raise HTTPException(status_code=409, detail="Tag already exists")
+        raise TagAlreadyExistsError("Tag already exists")
     tag.name = name
     await db.commit()
     await db.refresh(tag)
@@ -77,6 +77,6 @@ async def list_tags_with_counts(db: AsyncSession) -> list[TagResponse]:
 async def delete_tag(db: AsyncSession, tag_id: int) -> None:
     tag = await db.get(Tag, tag_id)
     if not tag:
-        raise HTTPException(status_code=404, detail="Tag not found")
+        raise TagNotFoundError("Tag not found")
     await db.delete(tag)
     await db.commit()

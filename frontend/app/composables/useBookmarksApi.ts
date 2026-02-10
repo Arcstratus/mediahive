@@ -1,28 +1,29 @@
 import type { Bookmark, PaginatedResponse } from '~/types'
 
 export function useBookmarksApi() {
-  const { public: { apiBase } } = useRuntimeConfig()
+  const api = useApiFetch()
 
   return {
     list: (key: string, query?: Record<string, unknown> | (() => Record<string, unknown>), opts?: { watch?: any[] }) =>
-      useAsyncData(key, () => {
+      useAsyncData(key, async () => {
         const q = typeof query === 'function' ? query() : query
-        return $fetch<PaginatedResponse<Bookmark>>(`${apiBase}/bookmarks`, { query: q })
+        const { data } = await api<PaginatedResponse<Bookmark>>('/bookmarks', { query: q })
+        return data
       }, opts),
 
     create: (body: Record<string, unknown>) =>
-      $fetch<Bookmark>(`${apiBase}/bookmarks`, { method: 'POST', body }),
+      api<Bookmark>('/bookmarks', { method: 'POST', body }),
 
     batchCreate: (items: Record<string, unknown>[]) =>
-      $fetch<{ created: number; items: Bookmark[] }>(`${apiBase}/bookmarks/batch`, { method: 'POST', body: items }),
+      api<{ created: number; items: Bookmark[] }>('/bookmarks/batch', { method: 'POST', body: items }),
 
     update: (id: number, body: Record<string, unknown>) =>
-      $fetch<Bookmark>(`${apiBase}/bookmarks/${id}`, { method: 'PUT', body }),
+      api<Bookmark>(`/bookmarks/${id}`, { method: 'PUT', body }),
 
     remove: (id: number) =>
-      $fetch<void>(`${apiBase}/bookmarks/${id}`, { method: 'DELETE' }),
+      api<void>(`/bookmarks/${id}`, { method: 'DELETE' }),
 
     batchDelete: (ids: number[]) =>
-      $fetch<void>(`${apiBase}/bookmarks/batch`, { method: 'DELETE', body: { ids } }),
+      api<void>('/bookmarks/batch', { method: 'DELETE', body: { ids } }),
   }
 }

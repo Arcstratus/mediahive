@@ -7,6 +7,7 @@ definePageMeta({
 
 const { public: { apiBase } } = useRuntimeConfig()
 const resourcesApi = useResourcesApi()
+const toast = useToast()
 const route = useRoute()
 const router = useRouter()
 
@@ -30,7 +31,8 @@ const imageCache = new Map<string, HTMLImageElement>()
 const preloadedVideos = new Set<string>()
 
 async function fetchIds() {
-  ids.value = await resourcesApi.getIds()
+  const { data } = await resourcesApi.getIds()
+  if (data) ids.value = data
 }
 
 async function fetchResource(id: number) {
@@ -39,7 +41,8 @@ async function fetchResource(id: number) {
     resource.value = cached
   }
   else {
-    const data = await resourcesApi.get(id)
+    const { data } = await resourcesApi.get(id)
+    if (!data) return
     resourceCache.set(id, data)
     resource.value = data
   }
@@ -67,11 +70,9 @@ function preloadMedia(res: Resource) {
 
 async function preloadResource(id: number) {
   if (!resourceCache.has(id)) {
-    try {
-      const data = await resourcesApi.get(id)
-      resourceCache.set(id, data)
-    }
-    catch { return }
+    const { data } = await resourcesApi.get(id)
+    if (!data) return
+    resourceCache.set(id, data)
   }
   preloadMedia(resourceCache.get(id)!)
 }
@@ -125,7 +126,8 @@ onUnmounted(() => {
 async function deleteResource() {
   if (!currentId.value) return
   if (!confirm('Are you sure you want to delete this resource?')) return
-  await resourcesApi.remove(currentId.value)
+  const { error } = await resourcesApi.remove(currentId.value)
+  if (error) { toast.add({ title: error, color: 'error' }); return }
   const idx = currentIndex.value
   ids.value.splice(idx, 1)
   resourceCache.delete(currentId.value)
@@ -140,40 +142,31 @@ async function deleteResource() {
 async function saveForm() {
   if (!currentId.value) return
   saving.value = true
-  try {
-    const updated = await resourcesApi.update(currentId.value, { title: form.title, folder: form.folder || null, tags: form.tags })
-    resource.value = updated
-    resourceCache.set(currentId.value, updated)
-  }
-  finally {
-    saving.value = false
-  }
+  const { data: updated, error } = await resourcesApi.update(currentId.value, { title: form.title, folder: form.folder || null, tags: form.tags })
+  saving.value = false
+  if (error) { toast.add({ title: error, color: 'error' }); return }
+  resource.value = updated
+  resourceCache.set(currentId.value, updated)
 }
 
 async function setThumbnail() {
   if (!currentId.value || !videoRef.value) return
   settingThumbnail.value = true
-  try {
-    const updated = await resourcesApi.setThumbnail(currentId.value, videoRef.value.currentTime)
-    resource.value = updated
-    resourceCache.set(currentId.value, updated)
-  }
-  finally {
-    settingThumbnail.value = false
-  }
+  const { data: updated, error } = await resourcesApi.setThumbnail(currentId.value, videoRef.value.currentTime)
+  settingThumbnail.value = false
+  if (error) { toast.add({ title: error, color: 'error' }); return }
+  resource.value = updated
+  resourceCache.set(currentId.value, updated)
 }
 
 async function removeThumbnail() {
   if (!currentId.value) return
   settingThumbnail.value = true
-  try {
-    const updated = await resourcesApi.removeThumbnail(currentId.value)
-    resource.value = updated
-    resourceCache.set(currentId.value, updated)
-  }
-  finally {
-    settingThumbnail.value = false
-  }
+  const { data: updated, error } = await resourcesApi.removeThumbnail(currentId.value)
+  settingThumbnail.value = false
+  if (error) { toast.add({ title: error, color: 'error' }); return }
+  resource.value = updated
+  resourceCache.set(currentId.value, updated)
 }
 </script>
 

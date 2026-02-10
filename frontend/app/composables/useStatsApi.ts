@@ -1,10 +1,13 @@
 import type { Stats } from '~/types'
 
 export function useStatsApi() {
-  const { public: { apiBase } } = useRuntimeConfig()
+  const api = useApiFetch()
 
   return {
     get: (key: string) =>
-      useAsyncData(key, () => $fetch<Stats>(`${apiBase}/stats`)),
+      useAsyncData(key, async () => {
+        const { data } = await api<Stats>('/stats')
+        return data
+      }),
   }
 }

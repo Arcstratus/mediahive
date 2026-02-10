@@ -14,6 +14,7 @@ const ALL_EXTENSIONS = [
 const { public: { apiBase } } = useRuntimeConfig()
 const resourcesApi = useResourcesApi()
 const tagsApi = useTagsApi()
+const toast = useToast()
 
 const viewMode = ref<'list' | 'tree'>('tree')
 const page = ref(1)
@@ -78,7 +79,8 @@ const selectedCount = computed(() => Object.values(rowSelection.value).filter(Bo
 async function batchDelete() {
   if (!confirm(`Are you sure you want to delete ${selectedCount.value} selected resource(s)?`)) return
   const ids = Object.keys(rowSelection.value).filter(k => rowSelection.value[k]).map(Number)
-  await resourcesApi.batchDelete(ids)
+  const { error } = await resourcesApi.batchDelete(ids)
+  if (error) { toast.add({ title: error, color: 'error' }); return }
   rowSelection.value = {}
   await refresh()
 }
@@ -172,13 +174,15 @@ function openEdit(resource: Resource) {
 
 async function deleteResource(id: number) {
   if (!confirm('Are you sure you want to delete this resource?')) return
-  await resourcesApi.remove(id)
+  const { error } = await resourcesApi.remove(id)
+  if (error) { toast.add({ title: error, color: 'error' }); return }
   await refresh()
 }
 
 async function removeTag(resource: Resource, tagName: string) {
   const updatedTags = resource.tags.filter(t => t.name !== tagName).map(t => t.name)
-  await resourcesApi.update(resource.id, { tags: updatedTags })
+  const { error } = await resourcesApi.update(resource.id, { tags: updatedTags })
+  if (error) { toast.add({ title: error, color: 'error' }); return }
   await refresh()
 }
 

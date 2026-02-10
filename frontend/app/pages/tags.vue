@@ -7,6 +7,7 @@ definePageMeta({
 })
 
 const tagsApi = useTagsApi()
+const toast = useToast()
 
 const { data: tags, refresh } = await tagsApi.list('tags')
 
@@ -28,7 +29,8 @@ function openEditModal(tag: Tag) {
 
 async function deleteTag(id: number) {
   if (!confirm('Are you sure you want to delete this tag?')) return
-  await tagsApi.remove(id)
+  const { error } = await tagsApi.remove(id)
+  if (error) { toast.add({ title: error, color: 'error' }); return }
   await refresh()
 }
 

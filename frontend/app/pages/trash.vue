@@ -7,25 +7,29 @@ definePageMeta({
 })
 
 const trashApi = useTrashApi()
+const toast = useToast()
 
 const { data: items, refresh } = await trashApi.list('trash')
 
 const trashItems = computed(() => items.value ?? [])
 
 async function restoreItem(id: number) {
-  await trashApi.restore(id)
+  const { error } = await trashApi.restore(id)
+  if (error) { toast.add({ title: error, color: 'error' }); return }
   await refresh()
 }
 
 async function deleteItem(id: number) {
   if (!confirm('Permanently delete this resource? This cannot be undone.')) return
-  await trashApi.remove(id)
+  const { error } = await trashApi.remove(id)
+  if (error) { toast.add({ title: error, color: 'error' }); return }
   await refresh()
 }
 
 async function emptyTrash() {
   if (!confirm('Permanently delete all trashed resources? This cannot be undone.')) return
-  await trashApi.empty()
+  const { error } = await trashApi.empty()
+  if (error) { toast.add({ title: error, color: 'error' }); return }
   await refresh()
 }
 

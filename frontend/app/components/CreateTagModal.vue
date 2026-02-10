@@ -6,6 +6,7 @@ const emit = defineEmits<{
 }>()
 
 const tagsApi = useTagsApi()
+const toast = useToast()
 
 const tagName = ref('')
 
@@ -16,7 +17,8 @@ watch(open, (val) => {
 
 async function submit() {
   if (!tagName.value.trim()) return
-  await tagsApi.create(tagName.value.trim())
+  const { error } = await tagsApi.create(tagName.value.trim())
+  if (error) { toast.add({ title: error, color: 'error' }); return }
   open.value = false
   emit('created')
 }
