@@ -1,6 +1,5 @@
 """Tests for the resources router."""
 
-from datetime import datetime, timezone
 from unittest.mock import AsyncMock, patch
 
 import httpx
@@ -69,7 +68,9 @@ class TestCreateResource:
         # Verify tags exist in the database
         from sqlalchemy import select
 
-        result = await db.execute(select(Tag).where(Tag.name.in_(["new-tag-1", "new-tag-2"])))
+        result = await db.execute(
+            select(Tag).where(Tag.name.in_(["new-tag-1", "new-tag-2"]))
+        )
         tags = result.scalars().all()
         assert len(tags) == 2
 
@@ -155,7 +156,9 @@ class TestListResources:
         assert data["total"] == 1
         assert data["items"][0]["filename"] == "a.jpg"
 
-    async def test_filter_by_multiple_tags_intersection(self, client: httpx.AsyncClient):
+    async def test_filter_by_multiple_tags_intersection(
+        self, client: httpx.AsyncClient
+    ):
         await _create_resource(client, filename="a.jpg", tags=["nature", "sunset"])
         await _create_resource(client, filename="b.jpg", tags=["nature"])
         await _create_resource(client, filename="c.jpg", tags=["sunset"])
@@ -180,8 +183,10 @@ class TestListResources:
         assert data["total"] == 1
         assert data["items"][0]["title"] == "A"
 
-    async def test_excludes_soft_deleted(self, client: httpx.AsyncClient, db: AsyncSession):
-        r1 = await _create_resource(client, filename="keep.jpg", title="Keep")
+    async def test_excludes_soft_deleted(
+        self, client: httpx.AsyncClient, db: AsyncSession
+    ):
+        await _create_resource(client, filename="keep.jpg", title="Keep")
         r2 = await _create_resource(client, filename="del.jpg", title="Delete")
 
         # Soft-delete r2
@@ -394,7 +399,9 @@ class TestDeleteResource:
         resp = await client.delete("/api/resources/99999")
         assert resp.status_code == 404
 
-    async def test_returns_404_for_already_soft_deleted(self, client: httpx.AsyncClient):
+    async def test_returns_404_for_already_soft_deleted(
+        self, client: httpx.AsyncClient
+    ):
         created = await _create_resource(client, filename="a.jpg")
 
         resp1 = await client.delete(f"/api/resources/{created['id']}")
@@ -410,7 +417,9 @@ class TestDeleteResource:
 
 
 class TestBatchDelete:
-    async def test_soft_deletes_multiple(self, client: httpx.AsyncClient, db: AsyncSession):
+    async def test_soft_deletes_multiple(
+        self, client: httpx.AsyncClient, db: AsyncSession
+    ):
         r1 = await _create_resource(client, filename="a.jpg")
         r2 = await _create_resource(client, filename="b.jpg")
         r3 = await _create_resource(client, filename="c.jpg")
@@ -472,7 +481,9 @@ class TestDownloadResource:
         assert resp.json()["status"] == "downloading"
         mock_bg.assert_awaited_once_with("https://example.com/photo.jpg", ".jpg")
 
-    async def test_returns_400_for_unsupported_extension(self, client: httpx.AsyncClient):
+    async def test_returns_400_for_unsupported_extension(
+        self, client: httpx.AsyncClient
+    ):
         resp = await client.post(
             "/api/resources/download",
             json={"url": "https://example.com/file.txt"},

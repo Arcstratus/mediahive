@@ -19,7 +19,13 @@ from sqlalchemy import asc, desc, func, or_, select, type_coerce
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.types import String
 
-from app.config import IMAGE_EXTENSIONS, MEDIA_DIR, THUMBNAIL_DIR, TRASH_DIR, VIDEO_EXTENSIONS
+from app.config import (
+    IMAGE_EXTENSIONS,
+    MEDIA_DIR,
+    THUMBNAIL_DIR,
+    TRASH_DIR,
+    VIDEO_EXTENSIONS,
+)
 from app.converters import remux_to_mp4
 from app.database import async_session, get_db
 from app.models import Resource, Tag, resource_tags
@@ -43,10 +49,14 @@ async def _generate_thumbnail(video_path: Path, sha_prefix: str) -> str | None:
     try:
         proc = await asyncio.create_subprocess_exec(
             "ffmpeg",
-            "-ss", "1",
-            "-i", str(video_path),
-            "-frames:v", "1",
-            "-q:v", "2",
+            "-ss",
+            "1",
+            "-i",
+            str(video_path),
+            "-frames:v",
+            "1",
+            "-q:v",
+            "2",
             str(thumb_path),
             "-y",
             stdout=asyncio.subprocess.DEVNULL,
@@ -58,7 +68,6 @@ async def _generate_thumbnail(video_path: Path, sha_prefix: str) -> str | None:
     except Exception:
         pass
     return None
-
 
 
 async def _resolve_tags(db: AsyncSession, tag_names: list[str]) -> list[Tag]:
@@ -473,10 +482,14 @@ async def set_thumbnail(
     thumb_path = THUMBNAIL_DIR / thumb_filename
     proc = await asyncio.create_subprocess_exec(
         "ffmpeg",
-        "-ss", str(body.timestamp),
-        "-i", str(video_path),
-        "-frames:v", "1",
-        "-q:v", "2",
+        "-ss",
+        str(body.timestamp),
+        "-i",
+        str(video_path),
+        "-frames:v",
+        "1",
+        "-q:v",
+        "2",
         str(thumb_path),
         "-y",
         stdout=asyncio.subprocess.DEVNULL,

@@ -58,9 +58,7 @@ async def permanently_delete(resource_id: int, db: AsyncSession = Depends(get_db
 
 @router.delete("/trash", status_code=204)
 async def empty_trash(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(
-        select(Resource).where(Resource.deleted_at.isnot(None))
-    )
+    result = await db.execute(select(Resource).where(Resource.deleted_at.isnot(None)))
     resources = result.scalars().all()
 
     for resource in resources:

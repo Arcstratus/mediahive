@@ -1,7 +1,6 @@
 """Tests for the tags router."""
 
 import httpx
-import pytest
 
 from app.models import Bookmark, Resource, Tag
 

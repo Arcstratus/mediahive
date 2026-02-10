@@ -181,9 +181,7 @@ async def test_get_bookmark_not_found(client):
 async def test_update_bookmark_title(client):
     created = await create_bookmark(client, title="Old", url="https://a.com")
 
-    resp = await client.put(
-        f"/api/bookmarks/{created['id']}", json={"title": "New"}
-    )
+    resp = await client.put(f"/api/bookmarks/{created['id']}", json={"title": "New"})
     assert resp.status_code == 200
     assert resp.json()["title"] == "New"
     assert resp.json()["url"] == "https://a.com"

@@ -6,10 +6,10 @@ from dataclasses import dataclass
 
 @dataclass
 class ProbeResult:
-    video_codec: str | None   # e.g. "h264", "hevc", "vp9"
-    audio_codec: str | None   # e.g. "aac", "opus", "mp3"
-    container: str | None     # e.g. "matroska", "mpegts", "mov"
-    duration: float | None    # seconds
+    video_codec: str | None  # e.g. "h264", "hevc", "vp9"
+    audio_codec: str | None  # e.g. "aac", "opus", "mp3"
+    container: str | None  # e.g. "matroska", "mpegts", "mov"
+    duration: float | None  # seconds
     width: int | None
     height: int | None
 
@@ -32,8 +32,10 @@ async def probe_video(path: Path) -> ProbeResult | None:
     try:
         proc = await asyncio.create_subprocess_exec(
             "ffprobe",
-            "-v", "quiet",
-            "-print_format", "json",
+            "-v",
+            "quiet",
+            "-print_format",
+            "json",
             "-show_format",
             "-show_streams",
             str(path),
