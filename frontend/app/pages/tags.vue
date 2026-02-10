@@ -56,6 +56,8 @@ function formatDate(dateStr: string) {
 
 <template>
   <div class="flex flex-col gap-6">
+    <PageBreadcrumb :items="[{ label: 'Tags' }]" />
+
     <div class="flex items-center justify-between">
       <h1 class="text-2xl font-bold">Tags</h1>
       <UButton label="Add Tag" icon="i-lucide-plus" @click="openCreate" />

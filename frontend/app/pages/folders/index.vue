@@ -24,11 +24,7 @@ const filteredFolders = computed(() => {
 
 <template>
   <div class="flex flex-col gap-6">
-    <UBreadcrumb
-      :items="[
-        { label: 'Folders' }
-      ]"
-    />
+    <PageBreadcrumb :items="[{ label: 'Folders' }]" />
 
     <UInput v-model="search" placeholder="Filter folders..." icon="i-lucide-search" class="max-w-sm" />
 

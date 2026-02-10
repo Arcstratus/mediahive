@@ -323,7 +323,7 @@ async function onImported() {
 
 <template>
   <div class="flex flex-col gap-6">
-    <UBreadcrumb :items="[{ label: 'Resources' }]" />
+    <PageBreadcrumb :items="[{ label: 'Resources' }]" />
 
     <div class="flex items-center justify-between">
       <h1 class="text-2xl font-bold">Resources</h1>

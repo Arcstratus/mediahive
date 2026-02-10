@@ -178,7 +178,7 @@ async function saveForm() {
 
 <template>
   <div class="flex flex-col gap-6">
-    <UBreadcrumb
+    <PageBreadcrumb
       :items="[
         { label: 'Folders', to: '/folders' },
         { label: folderName },

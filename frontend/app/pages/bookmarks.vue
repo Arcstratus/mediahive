@@ -251,6 +251,8 @@ async function importBookmarks() {
 
 <template>
   <div class="flex flex-col gap-6">
+    <PageBreadcrumb :items="[{ label: 'Bookmarks' }]" />
+
     <div class="flex items-center justify-between">
       <h1 class="text-2xl font-bold">Bookmarks</h1>
     </div>
