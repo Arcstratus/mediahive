@@ -33,6 +33,11 @@ class BookmarkResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class BatchCreateBookmarkResponse(BaseModel):
+    created: int
+    items: list[BookmarkResponse]
+
+
 class PaginatedBookmarkResponse(BaseModel):
     items: list[BookmarkResponse]
     total: int

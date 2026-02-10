@@ -208,10 +208,10 @@ async function removeTag(bookmark: Bookmark, tagName: string) {
 
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-2">
-        <UButton label="Add Bookmark" icon="i-lucide-plus" @click="openCreate" />
-        <UButton label="Import" icon="i-lucide-upload" variant="soft" @click="importOpen = true" />
+        <UButton label="Add" icon="i-lucide-plus" @click="openCreate" />
+        <UButton label="Import" icon="i-lucide-file-down" variant="soft" @click="importOpen = true" />
         <UButton
-          :label="selectedCount > 0 ? `Delete Selected (${selectedCount})` : 'Delete Selected'"
+          :label="selectedCount > 0 ? `Delete (${selectedCount})` : 'Delete'"
           icon="i-lucide-trash-2"
           color="error"
           variant="soft"

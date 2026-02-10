@@ -28,6 +28,27 @@ async def create_bookmark(db: AsyncSession, body: BookmarkCreate) -> Bookmark:
     return bookmark
 
 
+async def batch_create_bookmarks(
+    db: AsyncSession, items: list[BookmarkCreate]
+) -> list[Bookmark]:
+    bookmarks = []
+    for body in items:
+        bookmark = Bookmark(
+            title=body.title,
+            url=body.url,
+            description=body.description,
+            folder=body.folder,
+        )
+        if body.tags:
+            bookmark.tags = await tag_service.resolve_tags(db, body.tags)
+        db.add(bookmark)
+        bookmarks.append(bookmark)
+    await db.commit()
+    for bm in bookmarks:
+        await db.refresh(bm)
+    return bookmarks
+
+
 async def list_bookmarks(
     db: AsyncSession,
     *,

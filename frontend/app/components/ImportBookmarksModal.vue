@@ -23,9 +23,8 @@ async function submit() {
   if (urls.length === 0) return
   importing.value = true
   try {
-    for (const url of urls) {
-      await bookmarksApi.create({ title: url, url, folder: importFolder.value || null })
-    }
+    const items = urls.map(url => ({ title: url, url, folder: importFolder.value || null }))
+    await bookmarksApi.batchCreate(items)
     open.value = false
     emit('imported')
   }

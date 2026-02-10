@@ -234,7 +234,7 @@ async def test_delete_bookmark_not_found(client):
     assert resp.status_code == 404
 
 
-# -- POST /api/bookmarks/batch-delete --
+# -- DELETE /api/bookmarks/batch --
 
 
 async def test_batch_delete(client):
@@ -242,8 +242,8 @@ async def test_batch_delete(client):
     b2 = await create_bookmark(client, url="https://b.com")
     b3 = await create_bookmark(client, url="https://c.com")
 
-    resp = await client.post(
-        "/api/bookmarks/batch-delete", json={"ids": [b1["id"], b3["id"]]}
+    resp = await client.request(
+        "DELETE", "/api/bookmarks/batch", json={"ids": [b1["id"], b3["id"]]}
     )
     assert resp.status_code == 200
     assert resp.json()["deleted"] == 2
@@ -256,12 +256,12 @@ async def test_batch_delete(client):
 async def test_batch_delete_skips_nonexistent(client):
     b1 = await create_bookmark(client, url="https://a.com")
 
-    resp = await client.post(
-        "/api/bookmarks/batch-delete", json={"ids": [b1["id"], 999]}
+    resp = await client.request(
+        "DELETE", "/api/bookmarks/batch", json={"ids": [b1["id"], 999]}
     )
     assert resp.json()["deleted"] == 1
 
 
 async def test_batch_delete_empty_list(client):
-    resp = await client.post("/api/bookmarks/batch-delete", json={"ids": []})
+    resp = await client.request("DELETE", "/api/bookmarks/batch", json={"ids": []})
     assert resp.json()["deleted"] == 0

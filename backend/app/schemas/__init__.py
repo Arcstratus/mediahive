@@ -1,4 +1,5 @@
 from .bookmark import (
+    BatchCreateBookmarkResponse,
     BookmarkCreate,
     BookmarkResponse,
     BookmarkUpdate,
@@ -24,6 +25,7 @@ from .stats import StatsResponse
 from .tag import TagCreate, TagResponse, TagUpdate
 
 __all__ = [
+    "BatchCreateBookmarkResponse",
     "BatchDeleteRequest",
     "BatchDeleteResponse",
     "BookmarkCreate",

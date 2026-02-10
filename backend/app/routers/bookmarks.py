@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.schemas import (
+    BatchCreateBookmarkResponse,
     BatchDeleteRequest,
     BatchDeleteResponse,
     BookmarkCreate,
@@ -18,6 +19,12 @@ router = APIRouter(tags=["Bookmarks"])
 @router.post("/bookmarks", response_model=BookmarkResponse, status_code=201)
 async def create_bookmark(body: BookmarkCreate, db: AsyncSession = Depends(get_db)):
     return await bookmark_service.create_bookmark(db, body)
+
+
+@router.post("/bookmarks/batch", response_model=BatchCreateBookmarkResponse, status_code=201)
+async def batch_create_bookmarks(body: list[BookmarkCreate], db: AsyncSession = Depends(get_db)):
+    items = await bookmark_service.batch_create_bookmarks(db, body)
+    return BatchCreateBookmarkResponse(created=len(items), items=items)
 
 
 @router.get("/bookmarks", response_model=PaginatedBookmarkResponse)
@@ -48,14 +55,14 @@ async def update_bookmark(
     return await bookmark_service.update_bookmark(db, bookmark_id, body)
 
 
-@router.delete("/bookmarks/{bookmark_id}", status_code=204)
-async def delete_bookmark(bookmark_id: int, db: AsyncSession = Depends(get_db)):
-    await bookmark_service.delete_bookmark(db, bookmark_id)
-
-
-@router.post("/bookmarks/batch-delete", response_model=BatchDeleteResponse)
+@router.delete("/bookmarks/batch", response_model=BatchDeleteResponse)
 async def batch_delete_bookmarks(
     body: BatchDeleteRequest, db: AsyncSession = Depends(get_db)
 ):
     deleted = await bookmark_service.batch_delete_bookmarks(db, body.ids)
     return BatchDeleteResponse(deleted=deleted)
+
+
+@router.delete("/bookmarks/{bookmark_id}", status_code=204)
+async def delete_bookmark(bookmark_id: int, db: AsyncSession = Depends(get_db)):
+    await bookmark_service.delete_bookmark(db, bookmark_id)

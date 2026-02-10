@@ -13,6 +13,9 @@ export function useBookmarksApi() {
     create: (body: Record<string, unknown>) =>
       $fetch<Bookmark>(`${apiBase}/bookmarks`, { method: 'POST', body }),
 
+    batchCreate: (items: Record<string, unknown>[]) =>
+      $fetch<{ created: number; items: Bookmark[] }>(`${apiBase}/bookmarks/batch`, { method: 'POST', body: items }),
+
     update: (id: number, body: Record<string, unknown>) =>
       $fetch<Bookmark>(`${apiBase}/bookmarks/${id}`, { method: 'PUT', body }),
 
@@ -20,6 +23,6 @@ export function useBookmarksApi() {
       $fetch<void>(`${apiBase}/bookmarks/${id}`, { method: 'DELETE' }),
 
     batchDelete: (ids: number[]) =>
-      $fetch<void>(`${apiBase}/bookmarks/batch-delete`, { method: 'POST', body: { ids } }),
+      $fetch<void>(`${apiBase}/bookmarks/batch`, { method: 'DELETE', body: { ids } }),
   }
 }
