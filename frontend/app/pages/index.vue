@@ -23,27 +23,6 @@ const statCards = computed(() => [
   { label: 'Tags', icon: 'i-lucide-tags', count: stats.value?.tags ?? 0, to: '/tags' },
 ])
 
-// Tag cloud sizing
-const TAG_SIZES = ['text-xs', 'text-sm', 'text-base', 'text-lg', 'text-xl', 'text-2xl', 'text-3xl']
-
-function getTagSize(count: number, min: number, max: number): string {
-  if (min === max) return TAG_SIZES[3]
-  const index = Math.round(((count - min) / (max - min)) * (TAG_SIZES.length - 1))
-  return TAG_SIZES[index]
-}
-
-const tagCloud = computed(() => {
-  const allTags = tags.value ?? []
-  if (!allTags.length) return []
-  const counts = allTags.map(t => t.resource_count)
-  const min = Math.min(...counts)
-  const max = Math.max(...counts)
-  return allTags.map(t => ({
-    ...t,
-    sizeClass: getTagSize(t.resource_count, min, max),
-  }))
-})
-
 const { public: { apiBase } } = useRuntimeConfig()
 
 // Modal states
@@ -154,25 +133,7 @@ async function onRefreshAll() {
     </div>
 
     <!-- Tag Cloud -->
-    <UCard v-if="tagCloud.length">
-      <template #header>
-        <div class="flex items-center justify-between">
-          <h2 class="font-semibold">Tags</h2>
-          <UButton label="Manage Tags" variant="ghost" to="/tags" size="sm" />
-        </div>
-      </template>
-      <div class="flex flex-wrap gap-3 items-baseline">
-        <NuxtLink
-          v-for="tag in tagCloud"
-          :key="tag.id"
-          :to="`/resources?tag=${encodeURIComponent(tag.name)}`"
-          :class="[tag.sizeClass, 'text-muted hover:text-primary transition-colors']"
-          :title="`${tag.name} (${tag.resource_count})`"
-        >
-          {{ tag.name }}
-        </NuxtLink>
-      </div>
-    </UCard>
+    <TagCloud :tags="tags ?? []" />
 
     <UploadModal v-model:open="uploadOpen" @uploaded="onRefreshAll" />
     <BookmarkModal v-model:open="bookmarkOpen" @saved="onRefreshAll" />
