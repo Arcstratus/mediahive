@@ -28,6 +28,7 @@ const { public: { apiBase } } = useRuntimeConfig()
 // Modal states
 const uploadOpen = ref(false)
 const bookmarkOpen = ref(false)
+const importBookmarksOpen = ref(false)
 const importOpen = ref(false)
 
 async function onRefreshAll() {
@@ -121,6 +122,13 @@ async function onRefreshAll() {
               @click="bookmarkOpen = true"
             />
             <UButton
+              label="Import Bookmarks"
+              icon="i-lucide-file-down"
+              variant="soft"
+              block
+              @click="importBookmarksOpen = true"
+            />
+            <UButton
               label="Import Folder"
               icon="i-lucide-folder-input"
               variant="soft"
@@ -137,6 +145,7 @@ async function onRefreshAll() {
 
     <UploadModal v-model:open="uploadOpen" @uploaded="onRefreshAll" />
     <BookmarkModal v-model:open="bookmarkOpen" @saved="onRefreshAll" />
+    <ImportBookmarksModal v-model:open="importBookmarksOpen" @imported="onRefreshAll" />
     <ImportFolderModal v-model:open="importOpen" @imported="onRefreshAll" />
   </div>
 </template>
