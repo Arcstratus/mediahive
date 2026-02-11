@@ -25,7 +25,6 @@ from app.exceptions import (
 from app.models import Resource, ResourceCategory, Tag, resource_tags
 from app.schemas import (
     PaginatedResponse,
-    ResourceCreate,
     ResourceUpdate,
 )
 from app.services.file_service import (
@@ -188,18 +187,6 @@ async def list_resource_folders(db: AsyncSession) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 
-async def create_resource(db: AsyncSession, body: ResourceCreate) -> Resource:
-    resource = Resource(
-        category=body.category, filename=body.filename, title=body.title
-    )
-    if body.tags:
-        resource.tags = await resolve_tags(db, body.tags)
-    db.add(resource)
-    await db.commit()
-    await db.refresh(resource)
-    return resource
-
-
 async def get_resource(db: AsyncSession, resource_id: int) -> Resource:
     resource = await db.get(Resource, resource_id)
     if not resource or resource.deleted_at is not None:
@@ -276,7 +263,7 @@ async def batch_soft_delete(db: AsyncSession, ids: list[int]) -> int:
 # ---------------------------------------------------------------------------
 
 
-async def upload_resource(
+async def create_resource(
     db: AsyncSession,
     file_content: bytes,
     filename: str | None,

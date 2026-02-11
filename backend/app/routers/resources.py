@@ -21,18 +21,12 @@ from app.exceptions import (
 from app.schemas import (
     BatchDeleteRequest,
     PaginatedResponse,
-    ResourceCreate,
     ResourceResponse,
     ResourceUpdate,
 )
 from app.services import resource_service
 
 router = ErrorAwareRouter(tags=["Resources"])
-
-
-@router.post("/resources", response_model=ResourceResponse, status_code=201)
-async def create_resource(body: ResourceCreate, db: AsyncSession = Depends(get_db)):
-    return await resource_service.create_resource(db, body)
 
 
 @router.get("/resources", response_model=PaginatedResponse)
@@ -149,19 +143,19 @@ async def download_resource(body: DownloadRequest, bg: BackgroundTasks):
 
 
 @router.post(
-    "/resources/upload",
+    "/resources",
     response_model=ResourceResponse,
     status_code=201,
     error_map={ResourceValidationError: 400, ResourceAlreadyExistsError: 409},
 )
-async def upload_resource(
+async def create_resource(
     file: UploadFile,
     title: str | None = None,
     tags: str | None = None,
     db: AsyncSession = Depends(get_db),
 ):
     content = await file.read()
-    return await resource_service.upload_resource(
+    return await resource_service.create_resource(
         db, content, file.filename, title, tags
     )
 

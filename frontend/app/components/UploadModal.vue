@@ -32,7 +32,7 @@ async function submit() {
   formData.append('file', file.value)
   if (form.title) formData.append('title', form.title)
   if (form.tags.length) formData.append('tags', form.tags.join(','))
-  const { error } = await resourcesApi.upload(formData)
+  const { error } = await resourcesApi.create(formData)
   uploading.value = false
   if (error) { toast.add({ title: error, color: 'error' }); return }
   open.value = false
