@@ -27,6 +27,7 @@ async def list_bookmarks(
     per_page: int = 20,
     search: str | None = None,
     tag: list[str] | None = None,
+    folder: str | None = None,
     sort_by: str = "created_at",
     sort_desc: bool = True,
 ) -> tuple[list[Bookmark], int]:
@@ -34,6 +35,10 @@ async def list_bookmarks(
 
     base_query = select(Bookmark)
     count_query = select(func.count(Bookmark.id))
+
+    if folder:
+        base_query = base_query.where(Bookmark.folder == folder)
+        count_query = count_query.where(Bookmark.folder == folder)
 
     if search:
         condition = or_(
@@ -61,6 +66,16 @@ async def list_bookmarks(
     result = await db.execute(base_query.order_by(order).offset(offset).limit(per_page))
     items = list(result.scalars().unique().all())
     return items, total
+
+
+async def list_bookmark_folders(db: AsyncSession) -> list[dict]:
+    result = await db.execute(
+        select(Bookmark.folder, func.count(Bookmark.id))
+        .where(Bookmark.folder.isnot(None))
+        .group_by(Bookmark.folder)
+        .order_by(Bookmark.folder)
+    )
+    return [{"folder": f, "count": c} for f, c in result.all()]
 
 
 # ---------------------------------------------------------------------------

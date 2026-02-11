@@ -46,6 +46,7 @@ async def list_bookmarks(
     per_page: int = Query(20, ge=1, le=100),
     search: str | None = Query(None),
     tag: list[str] = Query(None),
+    folder: str | None = Query(None),
     sort_by: str = Query("created_at"),
     sort_desc: bool = Query(True),
     db: AsyncSession = Depends(get_db),
@@ -56,12 +57,18 @@ async def list_bookmarks(
         per_page=per_page,
         search=search,
         tag=tag,
+        folder=folder,
         sort_by=sort_by,
         sort_desc=sort_desc,
     )
     return PaginatedBookmarkResponse(
         items=items, total=total, page=page, per_page=per_page
     )
+
+
+@router.get("/bookmarks/folders")
+async def list_bookmark_folders(db: AsyncSession = Depends(get_db)):
+    return await bookmark_service.list_bookmark_folders(db)
 
 
 @router.get(

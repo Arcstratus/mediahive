@@ -1,4 +1,4 @@
-import type { Bookmark, PaginatedResponse } from '~/types'
+import type { Bookmark, FolderInfo, PaginatedResponse } from '~/types'
 
 export function useBookmarksApi() {
   const api = useApiFetch()
@@ -25,5 +25,11 @@ export function useBookmarksApi() {
 
     batchDelete: (ids: number[]) =>
       api<void>('/bookmarks/batch', { method: 'DELETE', body: { ids } }),
+
+    getFolders: (key: string) =>
+      useAsyncData(key, async () => {
+        const { data } = await api<FolderInfo[]>('/bookmarks/folders')
+        return data
+      }),
   }
 }

@@ -3,33 +3,35 @@ const items = [
   {
     label: 'Home',
     icon: 'i-lucide-house',
-    to: '/'
+    to: '/',
   },
   {
     label: 'Resources',
     icon: 'i-lucide-library',
-    to: '/resources'
-  },
-  {
-    label: 'Folders',
-    icon: 'i-lucide-folders',
-    to: '/folders'
+    defaultOpen: true,
+    children: [
+      { label: 'List', icon: 'i-lucide-list', to: '/resources' },
+      { label: 'Folders', icon: 'i-lucide-folders', to: '/resources/folders' },
+      { label: 'Trash', icon: 'i-lucide-trash-2', to: '/resources/trash' },
+    ],
   },
   {
     label: 'Bookmarks',
     icon: 'i-lucide-bookmark',
-    to: '/bookmarks'
+    defaultOpen: true,
+    children: [
+      { label: 'List', icon: 'i-lucide-list', to: '/bookmarks' },
+      { label: 'Folders', icon: 'i-lucide-folders', to: '/bookmarks/folders' },
+    ],
   },
   {
     label: 'Tags',
     icon: 'i-lucide-tag',
-    to: '/tags'
+    defaultOpen: true,
+    children: [
+      { label: 'List', icon: 'i-lucide-list', to: '/tags' },
+    ],
   },
-  {
-    label: 'Trash',
-    icon: 'i-lucide-trash-2',
-    to: '/trash'
-  }
 ]
 </script>
 

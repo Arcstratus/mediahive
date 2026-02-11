@@ -1,18 +1,12 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
-import type { Resource } from '~/types'
+import type { Bookmark } from '~/types'
 
 definePageMeta({
   layout: 'dashboard'
 })
 
-const ALL_EXTENSIONS = [
-  '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tiff', '.svg',
-  '.mp4', '.mkv', '.avi', '.mov', '.wmv', '.flv', '.webm', '.m4v', '.ts'
-]
-
-const { public: { apiBase } } = useRuntimeConfig()
-const resourcesApi = useResourcesApi()
+const bookmarksApi = useBookmarksApi()
 const tagsApi = useTagsApi()
 const toast = useToast()
 
@@ -20,38 +14,32 @@ const page = ref(1)
 const perPage = 20
 const filterSearch = ref('')
 const filterTags = ref<string[]>([])
-const filterExt = ref<string[]>([])
 const sorting = ref<{ id: string, desc: boolean }[]>([])
 
-const extOptions = computed(() =>
-  ALL_EXTENSIONS.map(e => ({ label: e, value: e }))
-)
-
-const { data: allTags, refresh: refreshTags } = await tagsApi.list('resource-tags')
+const { data: allTags, refresh: refreshTags } = await tagsApi.list('tags')
 
 const tagFilterOptions = computed(() =>
   (allTags.value ?? []).map(t => ({ label: t.name, value: t.name }))
 )
 
-const { data, refresh } = await resourcesApi.list('all-resources', () => {
+const { data, refresh } = await bookmarksApi.list('bookmarks', () => {
   const query: Record<string, unknown> = {
     page: page.value,
     per_page: perPage
   }
   if (filterSearch.value) query.search = filterSearch.value
   if (filterTags.value.length) query.tag = filterTags.value
-  if (filterExt.value.length) query.ext = filterExt.value
   if (sorting.value.length) {
     query.sort_by = sorting.value[0].id
     query.sort_desc = sorting.value[0].desc
   }
   return query
-}, { watch: [filterSearch, filterTags, filterExt, page, sorting] })
+}, { watch: [filterSearch, filterTags, page, sorting] })
 
-const resources = computed(() => data.value?.items ?? [])
+const bookmarks = computed(() => data.value?.items ?? [])
 const total = computed(() => data.value?.total ?? 0)
 
-watch([filterSearch, filterTags, filterExt], () => {
+watch([filterSearch, filterTags], () => {
   page.value = 1
 })
 
@@ -76,9 +64,9 @@ const rowSelection = ref<Record<string, boolean>>({})
 const selectedCount = computed(() => Object.values(rowSelection.value).filter(Boolean).length)
 
 async function batchDelete() {
-  if (!confirm(`Are you sure you want to delete ${selectedCount.value} selected resource(s)?`)) return
+  if (!confirm(`Are you sure you want to delete ${selectedCount.value} selected bookmark(s)?`)) return
   const ids = Object.keys(rowSelection.value).filter(k => rowSelection.value[k]).map(Number)
-  const { error } = await resourcesApi.batchDelete(ids)
+  const { error } = await bookmarksApi.batchDelete(ids)
   if (error) { toast.add({ title: error, color: 'error' }); return }
   rowSelection.value = {}
   await refresh()
@@ -86,7 +74,7 @@ async function batchDelete() {
 
 const UCheckbox = resolveComponent('UCheckbox')
 
-const columns: TableColumn<Resource>[] = [
+const columns: TableColumn<Bookmark>[] = [
   {
     id: 'select',
     header: ({ table }) => h(UCheckbox, {
@@ -100,72 +88,64 @@ const columns: TableColumn<Resource>[] = [
       'aria-label': 'Select row'
     })
   },
-  { id: 'preview', header: 'Preview', size: 80 },
-  { accessorKey: 'title', header: sortHeader('Title'), maxSize: 300 },
-  { id: 'category', accessorKey: 'category', header: 'Category' },
-  { id: 'ext', accessorFn: row => getExtension(row.filename), header: sortHeader('Extension') },
+  { accessorKey: 'title', header: sortHeader('Title') },
+  { accessorKey: 'url', header: sortHeader('URL') },
+  { id: 'description', header: 'Description' },
   { id: 'folder', header: 'Folder' },
   { id: 'tags', header: 'Tags' },
   { accessorKey: 'created_at', header: sortHeader('Created At') },
   { id: 'actions', header: '' }
 ]
 
-// Edit modal
+// Modal state
 const modalOpen = ref(false)
-const editingResource = ref<Resource | null>(null)
+const editingBookmark = ref<Bookmark | null>(null)
+const importOpen = ref(false)
 
-function openEdit(resource: Resource) {
-  editingResource.value = resource
+function openCreate() {
+  editingBookmark.value = null
   modalOpen.value = true
 }
 
-async function deleteResource(id: number) {
-  if (!confirm('Are you sure you want to delete this resource?')) return
-  const { error } = await resourcesApi.remove(id)
-  if (error) { toast.add({ title: error, color: 'error' }); return }
-  await refresh()
+function openEdit(bookmark: Bookmark) {
+  editingBookmark.value = bookmark
+  modalOpen.value = true
 }
-
-async function removeTag(resource: Resource, tagName: string) {
-  const updatedTags = resource.tags.filter(t => t.name !== tagName).map(t => t.name)
-  const { error } = await resourcesApi.update(resource.id, { tags: updatedTags })
-  if (error) { toast.add({ title: error, color: 'error' }); return }
-  await refresh()
-}
-
-// Modal states
-const uploadOpen = ref(false)
-const downloadOpen = ref(false)
-const importOpen = ref(false)
 
 async function onRefreshAll() {
   await refresh()
   await refreshTags()
 }
+
+async function deleteBookmark(id: number) {
+  if (!confirm('Are you sure you want to delete this bookmark?')) return
+  const { error } = await bookmarksApi.remove(id)
+  if (error) { toast.add({ title: error, color: 'error' }); return }
+  await refresh()
+}
+
+async function removeTag(bookmark: Bookmark, tagName: string) {
+  const updatedTags = bookmark.tags.filter(t => t.name !== tagName).map(t => t.name)
+  const { error } = await bookmarksApi.update(bookmark.id, { tags: updatedTags })
+  if (error) { toast.add({ title: error, color: 'error' }); return }
+  await refresh()
+}
 </script>
 
 <template>
   <div class="flex flex-col gap-6">
-    <PageBreadcrumb :items="[{ label: 'Resources' }]" />
+    <PageBreadcrumb :items="[{ label: 'Bookmarks' }]" />
 
     <div class="flex items-center justify-between">
-      <h1 class="text-2xl font-bold">Resources</h1>
+      <h1 class="text-2xl font-bold">Bookmarks</h1>
     </div>
 
     <div class="flex items-center gap-2">
       <UInput
         v-model="filterSearch"
-        placeholder="Search title..."
+        placeholder="Search title, URL, or description..."
         icon="i-lucide-search"
         class="w-64"
-      />
-      <USelectMenu
-        v-model="filterExt"
-        :items="extOptions"
-        value-key="value"
-        placeholder="Extension"
-        multiple
-        class="w-48"
       />
       <USelectMenu
         v-model="filterTags"
@@ -178,19 +158,8 @@ async function onRefreshAll() {
     </div>
 
     <div class="flex items-center gap-2">
-      <UButton label="Upload" icon="i-lucide-upload" @click="uploadOpen = true" />
-      <UButton
-        label="Import"
-        icon="i-lucide-folder-input"
-        variant="soft"
-        @click="importOpen = true"
-      />
-      <UButton
-        label="Download from URL"
-        icon="i-lucide-download"
-        variant="soft"
-        @click="downloadOpen = true"
-      />
+      <UButton label="Add" icon="i-lucide-plus" @click="openCreate" />
+      <UButton label="Import" icon="i-lucide-file-down" variant="soft" @click="importOpen = true" />
       <UButton
         :label="selectedCount > 0 ? `Delete (${selectedCount})` : 'Delete'"
         icon="i-lucide-trash-2"
@@ -201,31 +170,24 @@ async function onRefreshAll() {
       />
     </div>
 
-    <UTable v-model:sorting="sorting" v-model:row-selection="rowSelection" :data="resources" :columns="columns" :sorting-options="{ manualSorting: true }" :get-row-id="(row: Resource) => String(row.id)">
-      <template #preview-cell="{ row }">
-        <img
-          v-if="row.original.category === 'image'"
-          :src="`${apiBase}/media/${row.original.folder ? row.original.folder + '/' : ''}${row.original.filename}`"
-          class="size-10 rounded object-cover"
-        >
-        <img
-          v-else-if="row.original.thumbnail"
-          :src="`${apiBase}/thumbnails/${row.original.thumbnail}`"
-          class="size-10 rounded object-cover"
-        >
-        <UIcon v-else name="i-lucide-video" class="size-10 text-muted" />
-      </template>
-
+    <UTable v-model:sorting="sorting" v-model:row-selection="rowSelection" :data="bookmarks" :columns="columns" :sorting-options="{ manualSorting: true }" :get-row-id="(row: Bookmark) => String(row.id)">
       <template #title-cell="{ row }">
-        <span class="block max-w-xs truncate" :title="row.original.title ?? ''">{{ row.original.title }}</span>
+        <span class="truncate max-w-48 block" :title="row.original.title">{{ row.original.title }}</span>
       </template>
 
-      <template #category-cell="{ row }">
-        <UBadge :label="row.original.category" :color="row.original.category === 'image' ? 'info' : 'warning'" variant="subtle" size="sm" />
+      <template #url-cell="{ row }">
+        <a
+          :href="row.original.url"
+          target="_blank"
+          class="text-primary hover:underline truncate max-w-48 block"
+          :title="row.original.url"
+        >
+          {{ row.original.url }}
+        </a>
       </template>
 
-      <template #ext-cell="{ row }">
-        <UBadge :label="getExtension(row.original.filename)" variant="subtle" size="sm" />
+      <template #description-cell="{ row }">
+        <span v-if="row.original.description" class="truncate max-w-32 block" :title="row.original.description">{{ row.original.description }}</span>
       </template>
 
       <template #folder-cell="{ row }">
@@ -254,13 +216,6 @@ async function onRefreshAll() {
       <template #actions-cell="{ row }">
         <div class="flex gap-1 justify-end">
           <UButton
-            icon="i-lucide-eye"
-            variant="ghost"
-            color="neutral"
-            size="xs"
-            :to="`/resources/viewer?id=${row.original.id}`"
-          />
-          <UButton
             icon="i-lucide-pencil"
             variant="ghost"
             color="neutral"
@@ -272,7 +227,7 @@ async function onRefreshAll() {
             variant="ghost"
             color="error"
             size="xs"
-            @click="deleteResource(row.original.id)"
+            @click="deleteBookmark(row.original.id)"
           />
         </div>
       </template>
@@ -282,9 +237,7 @@ async function onRefreshAll() {
       <UPagination v-model:page="page" :total="total" :items-per-page="perPage" />
     </div>
 
-    <EditResourceModal v-model:open="modalOpen" :resource="editingResource" @saved="onRefreshAll" />
-    <UploadModal v-model:open="uploadOpen" @uploaded="onRefreshAll" />
-    <DownloadUrlModal v-model:open="downloadOpen" @downloaded="onRefreshAll" />
-    <ImportFolderModal v-model:open="importOpen" @imported="onRefreshAll" />
+    <BookmarkModal v-model:open="modalOpen" :bookmark="editingBookmark" @saved="onRefreshAll" />
+    <ImportBookmarksModal v-model:open="importOpen" @imported="onRefreshAll" />
   </div>
 </template>

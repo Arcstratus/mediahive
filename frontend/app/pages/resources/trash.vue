@@ -45,7 +45,7 @@ const columns: TableColumn<TrashItem>[] = [
 
 <template>
   <div class="flex flex-col gap-6">
-    <PageBreadcrumb :items="[{ label: 'Trash' }]" />
+    <PageBreadcrumb :items="[{ label: 'Resources', to: '/resources' }, { label: 'Trash' }]" />
 
     <div class="flex items-center justify-between">
       <h1 class="text-2xl font-bold">Trash</h1>
