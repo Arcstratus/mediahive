@@ -125,7 +125,7 @@ class DownloadRequest(BaseModel):
 
 
 @router.post(
-    "/resources/download",
+    "/resources/download-from-url",
     status_code=202,
     error_map={ResourceValidationError: 400},
 )

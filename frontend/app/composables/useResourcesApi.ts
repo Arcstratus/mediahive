@@ -30,7 +30,7 @@ export function useResourcesApi() {
       api<void>('/resources', { method: 'POST', body }),
 
     download: (url: string) =>
-      api<void>('/resources/download', { method: 'POST', body: { url } }),
+      api<void>('/resources/download-from-url', { method: 'POST', body: { url } }),
 
     getFolders: (key: string) =>
       useAsyncData(key, async () => {

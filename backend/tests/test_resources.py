@@ -470,7 +470,7 @@ class TestBatchDelete:
 
 
 # ---------------------------------------------------------------------------
-# POST /api/resources/download
+# POST /api/resources/download-from-url
 # ---------------------------------------------------------------------------
 
 
@@ -480,7 +480,7 @@ class TestDownloadResource:
         self, mock_bg: AsyncMock, client: httpx.AsyncClient
     ):
         resp = await client.post(
-            "/api/resources/download",
+            "/api/resources/download-from-url",
             json={"url": "https://example.com/photo.jpg"},
         )
         assert resp.status_code == 202
@@ -491,7 +491,7 @@ class TestDownloadResource:
         self, client: httpx.AsyncClient
     ):
         resp = await client.post(
-            "/api/resources/download",
+            "/api/resources/download-from-url",
             json={"url": "https://example.com/file.txt"},
         )
         assert resp.status_code == 400
