@@ -24,7 +24,7 @@ async function submit() {
   if (urls.length === 0) return
   importing.value = true
   const items = urls.map(url => ({ title: url, url, folder: importFolder.value || null }))
-  const { error } = await bookmarksApi.batchCreate(items)
+  const { error } = await bookmarksApi.create(items)
   importing.value = false
   if (error) { toast.add({ title: error, color: 'error' }); return }
   open.value = false

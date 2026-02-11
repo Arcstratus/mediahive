@@ -40,7 +40,7 @@ async function submit() {
   const body = { title: form.title, url: form.url, description: form.description || null, folder: form.folder || null, tags: form.tags }
   const { error } = props.bookmark
     ? await bookmarksApi.update(props.bookmark.id, body)
-    : await bookmarksApi.create(body)
+    : await bookmarksApi.create([body])
   if (error) { toast.add({ title: error, color: 'error' }); return }
   open.value = false
   emit('saved')

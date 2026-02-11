@@ -19,23 +19,16 @@ router = ErrorAwareRouter(tags=["Bookmarks"])
 
 @router.post(
     "/bookmarks",
-    response_model=BookmarkResponse,
-    status_code=201,
-    error_map={BookmarkAlreadyExistsError: 409},
-)
-async def create_bookmark(body: BookmarkCreate, db: AsyncSession = Depends(get_db)):
-    return await bookmark_service.create_bookmark(db, body)
-
-
-@router.post(
-    "/bookmarks/batch",
     response_model=BatchCreateBookmarkResponse,
     status_code=201,
     error_map={BookmarkAlreadyExistsError: 409},
 )
-async def batch_create_bookmarks(
+async def create_bookmarks(
     body: list[BookmarkCreate], db: AsyncSession = Depends(get_db)
 ):
+    if len(body) == 1:
+        item = await bookmark_service.create_bookmark(db, body[0])
+        return BatchCreateBookmarkResponse(created=1, items=[item])
     items = await bookmark_service.batch_create_bookmarks(db, body)
     return BatchCreateBookmarkResponse(created=len(items), items=items)
 
@@ -91,7 +84,7 @@ async def update_bookmark(
     return await bookmark_service.update_bookmark(db, bookmark_id, body)
 
 
-@router.delete("/bookmarks/batch", status_code=204)
+@router.delete("/bookmarks", status_code=204)
 async def batch_delete_bookmarks(
     body: BatchDeleteRequest, db: AsyncSession = Depends(get_db)
 ):

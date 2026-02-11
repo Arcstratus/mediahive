@@ -84,7 +84,7 @@ async def list_resource_folders(db: AsyncSession = Depends(get_db)):
     return await resource_service.list_resource_folders(db)
 
 
-@router.delete("/resources/batch", status_code=204)
+@router.delete("/resources", status_code=204)
 async def batch_delete_resources(
     body: BatchDeleteRequest, db: AsyncSession = Depends(get_db)
 ):

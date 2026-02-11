@@ -12,9 +12,9 @@ from app.models import Bookmark
 
 async def create_bookmark(client: httpx.AsyncClient, **overrides) -> dict:
     payload = {"url": "https://example.com", **overrides}
-    resp = await client.post("/api/bookmarks", json=payload)
+    resp = await client.post("/api/bookmarks", json=[payload])
     assert resp.status_code == 201
-    return resp.json()
+    return resp.json()["items"][0]
 
 
 # -- POST /api/bookmarks --
@@ -243,7 +243,7 @@ async def test_batch_delete(client):
     b3 = await create_bookmark(client, url="https://c.com")
 
     resp = await client.request(
-        "DELETE", "/api/bookmarks/batch", json={"ids": [b1["id"], b3["id"]]}
+        "DELETE", "/api/bookmarks", json={"ids": [b1["id"], b3["id"]]}
     )
     assert resp.status_code == 204
 
@@ -256,11 +256,11 @@ async def test_batch_delete_skips_nonexistent(client):
     b1 = await create_bookmark(client, url="https://a.com")
 
     resp = await client.request(
-        "DELETE", "/api/bookmarks/batch", json={"ids": [b1["id"], 999]}
+        "DELETE", "/api/bookmarks", json={"ids": [b1["id"], 999]}
     )
     assert resp.status_code == 204
 
 
 async def test_batch_delete_empty_list(client):
-    resp = await client.request("DELETE", "/api/bookmarks/batch", json={"ids": []})
+    resp = await client.request("DELETE", "/api/bookmarks", json={"ids": []})
     assert resp.status_code == 204

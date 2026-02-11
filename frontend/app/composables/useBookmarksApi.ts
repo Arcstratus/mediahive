@@ -11,11 +11,8 @@ export function useBookmarksApi() {
         return data
       }, opts),
 
-    create: (body: Record<string, unknown>) =>
-      api<Bookmark>('/bookmarks', { method: 'POST', body }),
-
-    batchCreate: (items: Record<string, unknown>[]) =>
-      api<{ created: number; items: Bookmark[] }>('/bookmarks/batch', { method: 'POST', body: items }),
+    create: (items: Record<string, unknown>[]) =>
+      api<{ created: number; items: Bookmark[] }>('/bookmarks', { method: 'POST', body: items }),
 
     update: (id: number, body: Record<string, unknown>) =>
       api<Bookmark>(`/bookmarks/${id}`, { method: 'PUT', body }),
@@ -24,7 +21,7 @@ export function useBookmarksApi() {
       api<void>(`/bookmarks/${id}`, { method: 'DELETE' }),
 
     batchDelete: (ids: number[]) =>
-      api<void>('/bookmarks/batch', { method: 'DELETE', body: { ids } }),
+      api<void>('/bookmarks', { method: 'DELETE', body: { ids } }),
 
     getFolders: (key: string) =>
       useAsyncData(key, async () => {
