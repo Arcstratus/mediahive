@@ -29,7 +29,16 @@ from app.services import resource_service
 router = ErrorAwareRouter(tags=["Resources"])
 
 
-@router.get("/resources", response_model=PaginatedResponse)
+# ---------------------------------------------------------------------------
+# CRUD
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/resources",
+    summary="List resources",
+    response_model=PaginatedResponse,
+)
 async def list_resources(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
@@ -56,7 +65,67 @@ async def list_resources(
     )
 
 
-@router.get("/resources/ids", response_model=list[int])
+@router.post(
+    "/resources",
+    summary="Create resource",
+    response_model=ResourceResponse,
+    status_code=201,
+    error_map={ResourceValidationError: 400, ResourceAlreadyExistsError: 409},
+)
+async def create_resource(
+    file: UploadFile,
+    title: str | None = None,
+    tags: str | None = None,
+    db: AsyncSession = Depends(get_db),
+):
+    content = await file.read()
+    return await resource_service.create_resource(
+        db, content, file.filename, title, tags
+    )
+
+
+@router.get(
+    "/resources/{resource_id}",
+    summary="Get resource",
+    response_model=ResourceResponse,
+    error_map={ResourceNotFoundError: 404},
+)
+async def get_resource(resource_id: int, db: AsyncSession = Depends(get_db)):
+    return await resource_service.get_resource(db, resource_id)
+
+
+@router.put(
+    "/resources/{resource_id}",
+    summary="Update resource",
+    response_model=ResourceResponse,
+    error_map={ResourceNotFoundError: 404, ResourceValidationError: 400},
+)
+async def update_resource(
+    resource_id: int, body: ResourceUpdate, db: AsyncSession = Depends(get_db)
+):
+    return await resource_service.update_resource(db, resource_id, body)
+
+
+@router.delete(
+    "/resources/{resource_id}",
+    summary="Delete resource",
+    status_code=204,
+    error_map={ResourceNotFoundError: 404},
+)
+async def delete_resource(resource_id: int, db: AsyncSession = Depends(get_db)):
+    await resource_service.soft_delete_resource(db, resource_id)
+
+
+# ---------------------------------------------------------------------------
+# Special
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/resources/ids",
+    summary="List resource IDs",
+    response_model=list[int],
+)
 async def list_resource_ids(
     category: str | None = Query(None),
     search: str | None = Query(None),
@@ -79,45 +148,16 @@ async def list_resource_ids(
     )
 
 
-@router.get("/resources/folders")
+@router.get("/resources/folders", summary="List folders")
 async def list_resource_folders(db: AsyncSession = Depends(get_db)):
     return await resource_service.list_resource_folders(db)
 
 
-@router.delete("/resources", status_code=204)
+@router.delete("/resources", summary="Batch delete", status_code=204)
 async def batch_delete_resources(
     body: BatchDeleteRequest, db: AsyncSession = Depends(get_db)
 ):
     await resource_service.batch_soft_delete(db, body.ids)
-
-
-@router.get(
-    "/resources/{resource_id}",
-    response_model=ResourceResponse,
-    error_map={ResourceNotFoundError: 404},
-)
-async def get_resource(resource_id: int, db: AsyncSession = Depends(get_db)):
-    return await resource_service.get_resource(db, resource_id)
-
-
-@router.put(
-    "/resources/{resource_id}",
-    response_model=ResourceResponse,
-    error_map={ResourceNotFoundError: 404, ResourceValidationError: 400},
-)
-async def update_resource(
-    resource_id: int, body: ResourceUpdate, db: AsyncSession = Depends(get_db)
-):
-    return await resource_service.update_resource(db, resource_id, body)
-
-
-@router.delete(
-    "/resources/{resource_id}",
-    status_code=204,
-    error_map={ResourceNotFoundError: 404},
-)
-async def delete_resource(resource_id: int, db: AsyncSession = Depends(get_db)):
-    await resource_service.soft_delete_resource(db, resource_id)
 
 
 class DownloadRequest(BaseModel):
@@ -126,6 +166,7 @@ class DownloadRequest(BaseModel):
 
 @router.post(
     "/resources/download-from-url",
+    summary="Download from URL",
     status_code=202,
     error_map={ResourceValidationError: 400},
 )
@@ -142,30 +183,13 @@ async def download_resource(body: DownloadRequest, bg: BackgroundTasks):
     return {"status": "downloading"}
 
 
-@router.post(
-    "/resources",
-    response_model=ResourceResponse,
-    status_code=201,
-    error_map={ResourceValidationError: 400, ResourceAlreadyExistsError: 409},
-)
-async def create_resource(
-    file: UploadFile,
-    title: str | None = None,
-    tags: str | None = None,
-    db: AsyncSession = Depends(get_db),
-):
-    content = await file.read()
-    return await resource_service.create_resource(
-        db, content, file.filename, title, tags
-    )
-
-
 class ThumbnailRequest(BaseModel):
     timestamp: float
 
 
 @router.put(
     "/resources/{resource_id}/thumbnail",
+    summary="Set thumbnail",
     response_model=ResourceResponse,
     error_map={ResourceNotFoundError: 404, ResourceValidationError: 400},
 )
@@ -177,6 +201,7 @@ async def set_thumbnail(
 
 @router.delete(
     "/resources/{resource_id}/thumbnail",
+    summary="Remove thumbnail",
     response_model=ResourceResponse,
     error_map={ResourceNotFoundError: 404},
 )
