@@ -1,10 +1,10 @@
-import type { Bookmark, FolderInfo, PaginatedResponse } from '~/types'
+import type { Bookmark, BookmarkListParams, FolderInfo, PaginatedResponse } from '~/types'
 
 export function useBookmarksApi() {
   const api = useApiFetch()
 
   return {
-    list: (key: string, query?: Record<string, unknown> | (() => Record<string, unknown>), opts?: { watch?: any[] }) =>
+    list: (key: string, query?: BookmarkListParams | (() => BookmarkListParams), opts?: { watch?: any[] }) =>
       useAsyncData(key, async () => {
         const q = typeof query === 'function' ? query() : query
         const { data } = await api<PaginatedResponse<Bookmark>>('/bookmarks', { query: q })

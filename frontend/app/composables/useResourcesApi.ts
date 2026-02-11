@@ -1,10 +1,10 @@
-import type { Resource, PaginatedResponse, FolderInfo } from '~/types'
+import type { Resource, ResourceListParams, ResourceIdParams, PaginatedResponse, FolderInfo } from '~/types'
 
 export function useResourcesApi() {
   const api = useApiFetch()
 
   return {
-    list: (key: string, query?: Record<string, unknown> | (() => Record<string, unknown>), opts?: { watch?: any[] }) =>
+    list: (key: string, query?: ResourceListParams | (() => ResourceListParams), opts?: { watch?: any[] }) =>
       useAsyncData(key, async () => {
         const q = typeof query === 'function' ? query() : query
         const { data } = await api<PaginatedResponse<Resource>>('/resources', { query: q })
@@ -14,7 +14,7 @@ export function useResourcesApi() {
     get: (id: number) =>
       api<Resource>(`/resources/${id}`),
 
-    getIds: (params?: Record<string, unknown>) =>
+    getIds: (params?: ResourceIdParams) =>
       api<number[]>('/resources/ids', { params }),
 
     update: (id: number, body: Record<string, unknown>) =>

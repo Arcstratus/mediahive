@@ -41,6 +41,42 @@ export interface TrashItem {
 }
 
 // ============================================================================
+// API Query Params
+// ============================================================================
+
+export interface ResourceListParams {
+  page?: number
+  per_page?: number
+  category?: string
+  search?: string
+  ext?: string[]
+  tag?: string[]
+  folder?: string
+  sort_by?: string
+  sort_desc?: boolean
+}
+
+export interface ResourceIdParams {
+  category?: string
+  search?: string
+  ext?: string[]
+  tag?: string[]
+  folder?: string
+  sort_by?: string
+  sort_desc?: boolean
+}
+
+export interface BookmarkListParams {
+  page?: number
+  per_page?: number
+  search?: string
+  tag?: string[]
+  folder?: string
+  sort_by?: string
+  sort_desc?: boolean
+}
+
+// ============================================================================
 // API Response Types
 // ============================================================================
 

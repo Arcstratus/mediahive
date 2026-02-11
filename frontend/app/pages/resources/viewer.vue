@@ -221,7 +221,7 @@ async function removeThumbnail() {
         <UBadge :label="resource.category" :color="resource.category === 'image' ? 'info' : 'warning'" variant="subtle" size="sm" class="w-fit" />
         <div v-if="resource.thumbnail" class="flex flex-col gap-2">
           <p class="text-sm font-medium text-muted">Thumbnail</p>
-          <img :src="`${apiBase}/thumbnails/${resource.thumbnail}`" alt="Thumbnail" class="rounded-lg w-full object-cover" />
+          <img :src="`${apiBase}/thumbnails/${resource.thumbnail}`" alt="Thumbnail" class="rounded-lg w-full object-cover" >
           <UButton label="Remove Thumbnail" icon="i-lucide-x" variant="soft" color="error" size="sm" :loading="settingThumbnail" @click="removeThumbnail" />
         </div>
         <UFormField label="Title" name="title">
