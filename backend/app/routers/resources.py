@@ -170,7 +170,7 @@ class ThumbnailRequest(BaseModel):
     timestamp: float
 
 
-@router.post(
+@router.put(
     "/resources/{resource_id}/thumbnail",
     response_model=ResourceResponse,
     error_map={ResourceNotFoundError: 404, ResourceValidationError: 400},

@@ -39,7 +39,7 @@ export function useResourcesApi() {
       }),
 
     setThumbnail: (id: number, timestamp: number) =>
-      api<Resource>(`/resources/${id}/thumbnail`, { method: 'POST', body: { timestamp } }),
+      api<Resource>(`/resources/${id}/thumbnail`, { method: 'PUT', body: { timestamp } }),
 
     removeThumbnail: (id: number) =>
       api<Resource>(`/resources/${id}/thumbnail`, { method: 'DELETE' }),
