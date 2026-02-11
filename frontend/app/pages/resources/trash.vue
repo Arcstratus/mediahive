@@ -8,6 +8,7 @@ definePageMeta({
 
 const trashApi = useTrashApi()
 const toast = useToast()
+const { confirm } = useConfirmDialog()
 
 const { data: items, refresh } = await trashApi.list('trash')
 
@@ -20,14 +21,14 @@ async function restoreItem(id: number) {
 }
 
 async function deleteItem(id: number) {
-  if (!confirm('Permanently delete this resource? This cannot be undone.')) return
+  if (!await confirm({ title: 'Permanent Delete', message: 'Permanently delete this resource? This cannot be undone.' })) return
   const { error } = await trashApi.remove(id)
   if (error) { toast.add({ title: error, color: 'error' }); return }
   await refresh()
 }
 
 async function emptyTrash() {
-  if (!confirm('Permanently delete all trashed resources? This cannot be undone.')) return
+  if (!await confirm({ title: 'Empty Trash', message: 'Permanently delete all trashed resources? This cannot be undone.' })) return
   const { error } = await trashApi.empty()
   if (error) { toast.add({ title: error, color: 'error' }); return }
   await refresh()

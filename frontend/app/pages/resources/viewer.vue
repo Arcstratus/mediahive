@@ -8,6 +8,7 @@ definePageMeta({
 const { public: { apiBase } } = useRuntimeConfig()
 const resourcesApi = useResourcesApi()
 const toast = useToast()
+const { confirm } = useConfirmDialog()
 const route = useRoute()
 const router = useRouter()
 
@@ -125,7 +126,7 @@ onUnmounted(() => {
 
 async function deleteResource() {
   if (!currentId.value) return
-  if (!confirm('Are you sure you want to delete this resource?')) return
+  if (!await confirm({ message: 'Are you sure you want to delete this resource?' })) return
   const { error } = await resourcesApi.remove(currentId.value)
   if (error) { toast.add({ title: error, color: 'error' }); return }
   const idx = currentIndex.value

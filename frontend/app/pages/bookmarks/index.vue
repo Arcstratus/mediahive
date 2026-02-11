@@ -9,6 +9,7 @@ definePageMeta({
 const bookmarksApi = useBookmarksApi()
 const tagsApi = useTagsApi()
 const toast = useToast()
+const { confirm } = useConfirmDialog()
 
 const page = ref(1)
 const perPage = 20
@@ -64,7 +65,7 @@ const rowSelection = ref<Record<string, boolean>>({})
 const selectedCount = computed(() => Object.values(rowSelection.value).filter(Boolean).length)
 
 async function batchDelete() {
-  if (!confirm(`Are you sure you want to delete ${selectedCount.value} selected bookmark(s)?`)) return
+  if (!await confirm({ message: `Are you sure you want to delete ${selectedCount.value} selected bookmark(s)?` })) return
   const ids = Object.keys(rowSelection.value).filter(k => rowSelection.value[k]).map(Number)
   const { error } = await bookmarksApi.batchDelete(ids)
   if (error) { toast.add({ title: error, color: 'error' }); return }
@@ -118,7 +119,7 @@ async function onRefreshAll() {
 }
 
 async function deleteBookmark(id: number) {
-  if (!confirm('Are you sure you want to delete this bookmark?')) return
+  if (!await confirm({ message: 'Are you sure you want to delete this bookmark?' })) return
   const { error } = await bookmarksApi.remove(id)
   if (error) { toast.add({ title: error, color: 'error' }); return }
   await refresh()

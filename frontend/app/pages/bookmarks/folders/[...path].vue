@@ -8,6 +8,7 @@ definePageMeta({
 
 const bookmarksApi = useBookmarksApi()
 const toast = useToast()
+const { confirm } = useConfirmDialog()
 const route = useRoute()
 
 const folder = computed(() => {
@@ -72,7 +73,7 @@ function openEdit(bookmark: Bookmark) {
 }
 
 async function deleteBookmark(id: number) {
-  if (!confirm('Are you sure you want to delete this bookmark?')) return
+  if (!await confirm({ message: 'Are you sure you want to delete this bookmark?' })) return
   const { error } = await bookmarksApi.remove(id)
   if (error) { toast.add({ title: error, color: 'error' }); return }
   await refresh()

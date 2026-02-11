@@ -15,6 +15,7 @@ const { public: { apiBase } } = useRuntimeConfig()
 const resourcesApi = useResourcesApi()
 const tagsApi = useTagsApi()
 const toast = useToast()
+const { confirm } = useConfirmDialog()
 
 const page = ref(1)
 const perPage = 20
@@ -76,7 +77,7 @@ const rowSelection = ref<Record<string, boolean>>({})
 const selectedCount = computed(() => Object.values(rowSelection.value).filter(Boolean).length)
 
 async function batchDelete() {
-  if (!confirm(`Are you sure you want to delete ${selectedCount.value} selected resource(s)?`)) return
+  if (!await confirm({ message: `Are you sure you want to delete ${selectedCount.value} selected resource(s)?` })) return
   const ids = Object.keys(rowSelection.value).filter(k => rowSelection.value[k]).map(Number)
   const { error } = await resourcesApi.batchDelete(ids)
   if (error) { toast.add({ title: error, color: 'error' }); return }
@@ -120,7 +121,7 @@ function openEdit(resource: Resource) {
 }
 
 async function deleteResource(id: number) {
-  if (!confirm('Are you sure you want to delete this resource?')) return
+  if (!await confirm({ message: 'Are you sure you want to delete this resource?' })) return
   const { error } = await resourcesApi.remove(id)
   if (error) { toast.add({ title: error, color: 'error' }); return }
   await refresh()
