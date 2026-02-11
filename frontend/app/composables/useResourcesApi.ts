@@ -24,7 +24,7 @@ export function useResourcesApi() {
       api<void>(`/resources/${id}`, { method: 'DELETE' }),
 
     batchDelete: (ids: number[]) =>
-      api<void>('/resources/batch-delete', { method: 'POST', body: { ids } }),
+      api<void>('/resources/batch', { method: 'DELETE', body: { ids } }),
 
     upload: (body: FormData) =>
       api<void>('/resources/upload', { method: 'POST', body }),
