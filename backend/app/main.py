@@ -9,7 +9,7 @@ from app.routers import (
     bookmarks,
     convert,
     health,
-    imports,
+    local,
     resources,
     stats,
     tags,
@@ -29,7 +29,7 @@ app.add_middleware(
 app.include_router(health.router, prefix="/api")
 app.include_router(resources.router, prefix="/api")
 app.include_router(tags.router, prefix="/api")
-app.include_router(imports.router, prefix="/api")
+app.include_router(local.router, prefix="/api")
 app.include_router(bookmarks.router, prefix="/api")
 app.include_router(stats.router, prefix="/api")
 app.include_router(trash.router, prefix="/api")

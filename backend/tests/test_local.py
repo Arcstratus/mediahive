@@ -10,7 +10,7 @@ from app.models import Resource
 
 
 # ---------------------------------------------------------------------------
-# POST /api/imports/scan
+# POST /api/local/scan
 # ---------------------------------------------------------------------------
 
 
@@ -22,7 +22,7 @@ async def test_scan_folder_with_image_files(client: httpx.AsyncClient, tmp_path:
     img2 = tmp_path / "graphic.png"
     img2.write_bytes(b"\x89PNG" + b"\x00" * 50)  # 54 bytes
 
-    resp = await client.post("/api/imports/scan", json={"path": str(tmp_path)})
+    resp = await client.post("/api/local/scan", json={"path": str(tmp_path)})
     assert resp.status_code == 200
 
     data = resp.json()
@@ -45,7 +45,7 @@ async def test_scan_folder_with_video_files(client: httpx.AsyncClient, tmp_path:
     vid = tmp_path / "clip.mp4"
     vid.write_bytes(b"\x00\x00\x00\x1c" + b"\x00" * 200)
 
-    resp = await client.post("/api/imports/scan", json={"path": str(tmp_path)})
+    resp = await client.post("/api/local/scan", json={"path": str(tmp_path)})
     assert resp.status_code == 200
 
     data = resp.json()
@@ -64,7 +64,7 @@ async def test_scan_folder_ignores_non_media_files(
     img = tmp_path / "photo.webp"
     img.write_bytes(b"RIFF" + b"\x00" * 20)
 
-    resp = await client.post("/api/imports/scan", json={"path": str(tmp_path)})
+    resp = await client.post("/api/local/scan", json={"path": str(tmp_path)})
     assert resp.status_code == 200
 
     data = resp.json()
@@ -76,7 +76,7 @@ async def test_scan_folder_ignores_non_media_files(
 async def test_scan_nonexistent_path_returns_400(client: httpx.AsyncClient):
     """Scan a non-existent path returns 400."""
     resp = await client.post(
-        "/api/imports/scan", json={"path": "/nonexistent/path/abc123"}
+        "/api/local/scan", json={"path": "/nonexistent/path/abc123"}
     )
     assert resp.status_code == 400
     assert "does not exist" in resp.json()["error"]
@@ -100,7 +100,7 @@ async def test_scan_excludes_excluded_directories(
     # Create a file at root level
     (tmp_path / "root.jpg").write_bytes(b"\xff" * 5)
 
-    resp = await client.post("/api/imports/scan", json={"path": str(tmp_path)})
+    resp = await client.post("/api/local/scan", json={"path": str(tmp_path)})
     assert resp.status_code == 200
 
     data = resp.json()
@@ -109,7 +109,7 @@ async def test_scan_excludes_excluded_directories(
 
 
 # ---------------------------------------------------------------------------
-# POST /api/imports/execute
+# POST /api/local/import
 # ---------------------------------------------------------------------------
 
 
@@ -128,7 +128,7 @@ async def test_execute_import_creates_resources(
 
     with patch("app.services.import_service.MEDIA_DIR", media_dir):
         resp = await client.post(
-            "/api/imports/execute",
+            "/api/local/import",
             json={
                 "files": [
                     {"path": str(img1), "type": "image"},
@@ -180,7 +180,7 @@ async def test_execute_import_skips_existing_resources(
 
     with patch("app.services.import_service.MEDIA_DIR", media_dir):
         resp = await client.post(
-            "/api/imports/execute",
+            "/api/local/import",
             json={"files": [{"path": str(img), "type": "image"}]},
         )
 
@@ -207,7 +207,7 @@ async def test_execute_import_skips_nonexistent_source_files(
 
     with patch("app.services.import_service.MEDIA_DIR", media_dir):
         resp = await client.post(
-            "/api/imports/execute",
+            "/api/local/import",
             json={"files": [{"path": str(nonexistent), "type": "image"}]},
         )
 
@@ -231,7 +231,7 @@ async def test_execute_import_empty_file_list(
 
     with patch("app.services.import_service.MEDIA_DIR", media_dir):
         resp = await client.post(
-            "/api/imports/execute",
+            "/api/local/import",
             json={"files": []},
         )
 

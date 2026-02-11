@@ -8,7 +8,7 @@ const emit = defineEmits<{
   imported: [result: ImportResult]
 }>()
 
-const importsApi = useImportsApi()
+const localApi = useLocalApi()
 const toast = useToast()
 
 const folderPath = ref('')
@@ -52,7 +52,7 @@ watch(open, (val) => {
 
 async function scanFolder() {
   scanning.value = true
-  const { data, error } = await importsApi.scan(folderPath.value)
+  const { data, error } = await localApi.scan(folderPath.value)
   scanning.value = false
   if (error) { toast.add({ title: error, color: 'error' }); return }
   scannedFiles.value = data!.files
@@ -61,7 +61,7 @@ async function scanFolder() {
 
 async function executeImport() {
   importing.value = true
-  const { data, error } = await importsApi.execute(scannedFiles.value.map(f => ({ path: f.path, type: f.type })))
+  const { data, error } = await localApi.import(scannedFiles.value.map(f => ({ path: f.path, type: f.type })))
   importing.value = false
   if (error) { toast.add({ title: error, color: 'error' }); return }
   importResult.value = data!

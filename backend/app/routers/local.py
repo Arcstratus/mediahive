@@ -7,7 +7,7 @@ from app.exceptions import ImportPathError
 from app.schemas import ImportRequest, ImportResponse, ScanRequest, ScanResponse
 from app.services import import_service
 
-router = ErrorAwareRouter(prefix="/imports", tags=["Imports"])
+router = ErrorAwareRouter(prefix="/local", tags=["Local Import"])
 
 
 @router.post("/scan", response_model=ScanResponse, error_map={ImportPathError: 400})
@@ -16,7 +16,7 @@ async def scan_folder(body: ScanRequest):
     return ScanResponse(files=files)
 
 
-@router.post("/execute", response_model=ImportResponse)
-async def execute_import(body: ImportRequest, db: AsyncSession = Depends(get_db)):
+@router.post("/import", response_model=ImportResponse)
+async def import_files(body: ImportRequest, db: AsyncSession = Depends(get_db)):
     imported, skipped = await import_service.execute_import(db, body.files)
     return ImportResponse(imported=imported, skipped=skipped)
