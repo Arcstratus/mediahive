@@ -40,6 +40,18 @@ export interface TrashItem {
   deleted_at: string | null
 }
 
+export interface DemoUser {
+  uuid: string
+  name: string
+  email: string
+  phone: string
+  department: string
+  role: string
+  status: 'active' | 'inactive'
+  avatar: string
+  created_at: string
+}
+
 // ============================================================================
 // API Query Params
 // ============================================================================

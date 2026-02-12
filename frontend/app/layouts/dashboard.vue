@@ -25,7 +25,7 @@ const moduleMenuItems = computed(() => [
   })),
 ])
 
-const items = [
+const defaultItems = [
   {
     label: 'Home',
     icon: 'i-lucide-house',
@@ -59,6 +59,32 @@ const items = [
     ],
   },
 ]
+
+const foundationItems = [
+  {
+    label: '使用者管理',
+    icon: 'i-lucide-users',
+    defaultOpen: true,
+    children: [
+      { label: '使用者列表', icon: 'i-lucide-list', to: '/foundation/user' },
+      { label: '新增使用者', icon: 'i-lucide-plus', to: '/foundation/user/new' },
+    ],
+  },
+  {
+    label: '個人資料',
+    icon: 'i-lucide-user',
+    to: '/foundation/profile',
+  },
+]
+
+const sidebarItemsMap: Record<string, typeof defaultItems> = {
+  foundation: foundationItems,
+}
+
+const sidebarItems = computed(() => {
+  const mod = currentModule.value
+  return mod ? (sidebarItemsMap[mod.label.toLowerCase()] ?? defaultItems) : defaultItems
+})
 </script>
 
 <template>
@@ -71,7 +97,7 @@ const items = [
 
       <template #default="{ collapsed }">
         <UNavigationMenu
-          :items="items"
+          :items="sidebarItems"
           orientation="vertical"
           :collapsed="collapsed"
         />
