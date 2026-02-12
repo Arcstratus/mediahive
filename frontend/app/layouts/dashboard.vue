@@ -1,4 +1,30 @@
 <script setup lang="ts">
+const route = useRoute()
+
+const modules = [
+  { label: 'Foundation', icon: 'i-lucide-settings', path: '/foundation' },
+  { label: 'ERP', icon: 'i-lucide-package', path: '/erp' },
+  { label: 'HRM', icon: 'i-lucide-users', path: '/hrm' },
+  { label: 'CRM', icon: 'i-lucide-handshake', path: '/crm' },
+]
+
+const currentModule = computed(() => {
+  const path = route.path
+  return modules.find(m => path.startsWith(m.path))
+})
+
+const currentModuleLabel = computed(() => currentModule.value?.label ?? 'Mediahive')
+
+const moduleMenuItems = computed(() => [
+  modules.map(m => ({
+    label: m.label,
+    icon: m.icon,
+    onSelect() {
+      navigateTo(m.path)
+    },
+  })),
+])
+
 const items = [
   {
     label: 'Home',
@@ -54,9 +80,28 @@ const items = [
 
     <UDashboardPanel>
       <template #header>
-        <UDashboardNavbar title="Mediahive">
+        <UDashboardNavbar>
           <template #leading>
             <UDashboardSidebarCollapse />
+          </template>
+
+          <template #left>
+            <UDropdownMenu :items="moduleMenuItems">
+              <UButton
+                :icon="currentModule?.icon ?? 'i-lucide-layout-grid'"
+                :label="currentModuleLabel"
+                trailing-icon="i-lucide-chevron-down"
+                variant="outline"
+                color="neutral"
+              />
+            </UDropdownMenu>
+          </template>
+
+          <template #right>
+            <NavSearchModal />
+            <NavNotifications />
+            <NavSettingsDrawer />
+            <NavUserMenu />
           </template>
         </UDashboardNavbar>
       </template>
