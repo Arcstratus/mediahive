@@ -27,6 +27,7 @@ const columns: TableColumn<PerformanceItem>[] = [
   { accessorKey: 'kpi_rate', header: 'KPI 達成率' },
   { id: 'grade', accessorKey: 'grade', header: '評等' },
   { accessorKey: 'comment', header: '主管評語' },
+  { id: 'actions', header: '' },
 ]
 
 function getGradeColor(grade: PerformanceItem['grade']) {
@@ -43,7 +44,10 @@ function getGradeColor(grade: PerformanceItem['grade']) {
   <div class="flex flex-col gap-6">
     <PageBreadcrumb :items="[{ label: '績效考核' }]" />
 
-    <h1 class="text-2xl font-bold">績效考核</h1>
+    <div class="flex items-center justify-between">
+      <h1 class="text-2xl font-bold">績效考核</h1>
+      <UButton label="新增考核" icon="i-lucide-plus" to="/performance/new" />
+    </div>
 
     <UTable :data="items" :columns="columns">
       <template #grade-cell="{ row }">
@@ -53,6 +57,18 @@ function getGradeColor(grade: PerformanceItem['grade']) {
           variant="subtle"
           size="sm"
         />
+      </template>
+
+      <template #actions-cell="{ row }">
+        <div class="flex gap-1 justify-end">
+          <UButton
+            icon="i-lucide-pencil"
+            variant="ghost"
+            color="neutral"
+            size="xs"
+            :to="`/performance/${row.original.id}`"
+          />
+        </div>
       </template>
     </UTable>
   </div>

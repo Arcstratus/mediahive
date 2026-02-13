@@ -29,6 +29,7 @@ const columns: TableColumn<PurchaseItem>[] = [
   { accessorKey: 'amount', header: '金額' },
   { id: 'status', accessorKey: 'status', header: '狀態' },
   { accessorKey: 'created_at', header: '建立時間' },
+  { id: 'actions', header: '' },
 ]
 
 const statusColorMap: Record<string, string> = {
@@ -42,7 +43,10 @@ const statusColorMap: Record<string, string> = {
   <div class="flex flex-col gap-6">
     <PageBreadcrumb :items="[{ label: '採購管理' }]" />
 
-    <h1 class="text-2xl font-bold">採購管理</h1>
+    <div class="flex items-center justify-between">
+      <h1 class="text-2xl font-bold">採購管理</h1>
+      <UButton label="新增採購單" icon="i-lucide-plus" to="/purchase/new" />
+    </div>
 
     <UTable :data="items" :columns="columns">
       <template #amount-cell="{ row }">
@@ -58,6 +62,18 @@ const statusColorMap: Record<string, string> = {
       </template>
       <template #created_at-cell="{ row }">
         {{ formatDate(row.original.created_at) }}
+      </template>
+
+      <template #actions-cell="{ row }">
+        <div class="flex gap-1 justify-end">
+          <UButton
+            icon="i-lucide-pencil"
+            variant="ghost"
+            color="neutral"
+            size="xs"
+            :to="`/purchase/${row.original.id}`"
+          />
+        </div>
       </template>
     </UTable>
   </div>

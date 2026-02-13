@@ -31,6 +31,7 @@ const columns: TableColumn<LeaveItem>[] = [
   { accessorKey: 'days', header: '天數' },
   { accessorKey: 'reason', header: '事由' },
   { id: 'status', accessorKey: 'status', header: '狀態' },
+  { id: 'actions', header: '' },
 ]
 
 const typeColorMap: Record<string, string> = {
@@ -54,7 +55,10 @@ function getStatusColor(status: LeaveItem['status']) {
   <div class="flex flex-col gap-6">
     <PageBreadcrumb :items="[{ label: '請假管理' }]" />
 
-    <h1 class="text-2xl font-bold">請假管理</h1>
+    <div class="flex items-center justify-between">
+      <h1 class="text-2xl font-bold">請假管理</h1>
+      <UButton label="新增請假" icon="i-lucide-plus" to="/leave/new" />
+    </div>
 
     <UTable :data="items" :columns="columns">
       <template #type-cell="{ row }">
@@ -81,6 +85,18 @@ function getStatusColor(status: LeaveItem['status']) {
           variant="subtle"
           size="sm"
         />
+      </template>
+
+      <template #actions-cell="{ row }">
+        <div class="flex gap-1 justify-end">
+          <UButton
+            icon="i-lucide-pencil"
+            variant="ghost"
+            color="neutral"
+            size="xs"
+            :to="`/leave/${row.original.id}`"
+          />
+        </div>
       </template>
     </UTable>
   </div>

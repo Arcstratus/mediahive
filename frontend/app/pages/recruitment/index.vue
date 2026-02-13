@@ -27,6 +27,7 @@ const columns: TableColumn<RecruitmentItem>[] = [
   { accessorKey: 'applicants', header: '應徵人數' },
   { accessorKey: 'interviewing', header: '面試中' },
   { id: 'status', accessorKey: 'status', header: '狀態' },
+  { id: 'actions', header: '' },
 ]
 
 function getStatusColor(status: RecruitmentItem['status']) {
@@ -42,7 +43,10 @@ function getStatusColor(status: RecruitmentItem['status']) {
   <div class="flex flex-col gap-6">
     <PageBreadcrumb :items="[{ label: '招募管理' }]" />
 
-    <h1 class="text-2xl font-bold">招募管理</h1>
+    <div class="flex items-center justify-between">
+      <h1 class="text-2xl font-bold">招募管理</h1>
+      <UButton label="新增職缺" icon="i-lucide-plus" to="/recruitment/new" />
+    </div>
 
     <UTable :data="items" :columns="columns">
       <template #status-cell="{ row }">
@@ -52,6 +56,18 @@ function getStatusColor(status: RecruitmentItem['status']) {
           variant="subtle"
           size="sm"
         />
+      </template>
+
+      <template #actions-cell="{ row }">
+        <div class="flex gap-1 justify-end">
+          <UButton
+            icon="i-lucide-pencil"
+            variant="ghost"
+            color="neutral"
+            size="xs"
+            :to="`/recruitment/${row.original.id}`"
+          />
+        </div>
       </template>
     </UTable>
   </div>

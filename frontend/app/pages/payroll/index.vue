@@ -29,6 +29,7 @@ const columns: TableColumn<PayrollItem>[] = [
   { id: 'overtime_pay', accessorKey: 'overtime_pay', header: '加班費' },
   { id: 'deductions', accessorKey: 'deductions', header: '扣項' },
   { id: 'net_pay', accessorKey: 'net_pay', header: '實發金額' },
+  { id: 'actions', header: '' },
 ]
 
 function formatTWD(amount: number) {
@@ -40,7 +41,10 @@ function formatTWD(amount: number) {
   <div class="flex flex-col gap-6">
     <PageBreadcrumb :items="[{ label: '薪資管理' }]" />
 
-    <h1 class="text-2xl font-bold">薪資管理</h1>
+    <div class="flex items-center justify-between">
+      <h1 class="text-2xl font-bold">薪資管理</h1>
+      <UButton label="新增薪資單" icon="i-lucide-plus" to="/payroll/new" />
+    </div>
 
     <UTable :data="items" :columns="columns">
       <template #base_salary-cell="{ row }">
@@ -57,6 +61,18 @@ function formatTWD(amount: number) {
 
       <template #net_pay-cell="{ row }">
         <span class="font-semibold">{{ formatTWD(row.original.net_pay) }}</span>
+      </template>
+
+      <template #actions-cell="{ row }">
+        <div class="flex gap-1 justify-end">
+          <UButton
+            icon="i-lucide-pencil"
+            variant="ghost"
+            color="neutral"
+            size="xs"
+            :to="`/payroll/${row.original.id}`"
+          />
+        </div>
       </template>
     </UTable>
   </div>

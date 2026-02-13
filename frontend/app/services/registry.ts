@@ -143,6 +143,7 @@ export const projectService: ServiceConfig = {
   icon: 'i-lucide-folder-kanban',
   path: '/project',
   sidebar: [
+    { label: '專案總覽', icon: 'i-lucide-layout-dashboard', to: '/project/dashboard' },
     { label: '專案列表', icon: 'i-lucide-list', to: '/project' },
     { label: '新增專案', icon: 'i-lucide-plus', to: '/project/new' },
   ],

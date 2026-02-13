@@ -29,6 +29,7 @@ const columns: TableColumn<CampaignItem>[] = [
   { accessorKey: 'start_date', header: '開始日期' },
   { id: 'status', accessorKey: 'status', header: '狀態' },
   { accessorKey: 'conversion_rate', header: '轉換率' },
+  { id: 'actions', header: '' },
 ]
 
 const typeColorMap: Record<string, string> = {
@@ -48,7 +49,10 @@ const statusColorMap: Record<string, string> = {
   <div class="flex flex-col gap-6">
     <PageBreadcrumb :items="[{ label: '行銷活動' }]" />
 
-    <h1 class="text-2xl font-bold">行銷活動</h1>
+    <div class="flex items-center justify-between">
+      <h1 class="text-2xl font-bold">行銷活動</h1>
+      <UButton label="新增活動" icon="i-lucide-plus" to="/campaign/new" />
+    </div>
 
     <UTable :data="items" :columns="columns">
       <template #type-cell="{ row }">
@@ -71,6 +75,18 @@ const statusColorMap: Record<string, string> = {
 
       <template #start_date-cell="{ row }">
         {{ formatDate(row.original.start_date) }}
+      </template>
+
+      <template #actions-cell="{ row }">
+        <div class="flex gap-1 justify-end">
+          <UButton
+            icon="i-lucide-pencil"
+            variant="ghost"
+            color="neutral"
+            size="xs"
+            :to="`/campaign/${row.original.id}`"
+          />
+        </div>
       </template>
     </UTable>
   </div>

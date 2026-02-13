@@ -29,6 +29,7 @@ const columns: TableColumn<InventoryItem>[] = [
   { accessorKey: 'warehouse', header: '倉庫' },
   { id: 'status', accessorKey: 'status', header: '狀態' },
   { accessorKey: 'updated_at', header: '更新時間' },
+  { id: 'actions', header: '' },
 ]
 
 const statusColorMap: Record<string, string> = {
@@ -42,7 +43,10 @@ const statusColorMap: Record<string, string> = {
   <div class="flex flex-col gap-6">
     <PageBreadcrumb :items="[{ label: '庫存管理' }]" />
 
-    <h1 class="text-2xl font-bold">庫存管理</h1>
+    <div class="flex items-center justify-between">
+      <h1 class="text-2xl font-bold">庫存管理</h1>
+      <UButton label="新增品項" icon="i-lucide-plus" to="/inventory/new" />
+    </div>
 
     <UTable :data="items" :columns="columns">
       <template #status-cell="{ row }">
@@ -55,6 +59,18 @@ const statusColorMap: Record<string, string> = {
       </template>
       <template #updated_at-cell="{ row }">
         {{ formatDate(row.original.updated_at) }}
+      </template>
+
+      <template #actions-cell="{ row }">
+        <div class="flex gap-1 justify-end">
+          <UButton
+            icon="i-lucide-pencil"
+            variant="ghost"
+            color="neutral"
+            size="xs"
+            :to="`/inventory/${row.original.id}`"
+          />
+        </div>
       </template>
     </UTable>
   </div>

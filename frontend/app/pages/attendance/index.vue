@@ -27,6 +27,7 @@ const columns: TableColumn<AttendanceItem>[] = [
   { accessorKey: 'clock_in', header: '上班打卡' },
   { accessorKey: 'clock_out', header: '下班打卡' },
   { id: 'status', accessorKey: 'status', header: '狀態' },
+  { id: 'actions', header: '' },
 ]
 
 function getStatusColor(status: AttendanceItem['status']) {
@@ -43,7 +44,10 @@ function getStatusColor(status: AttendanceItem['status']) {
   <div class="flex flex-col gap-6">
     <PageBreadcrumb :items="[{ label: '出勤管理' }]" />
 
-    <h1 class="text-2xl font-bold">出勤管理</h1>
+    <div class="flex items-center justify-between">
+      <h1 class="text-2xl font-bold">出勤管理</h1>
+      <UButton label="新增紀錄" icon="i-lucide-plus" to="/attendance/new" />
+    </div>
 
     <UTable :data="items" :columns="columns">
       <template #clock_in-cell="{ row }">
@@ -61,6 +65,18 @@ function getStatusColor(status: AttendanceItem['status']) {
           variant="subtle"
           size="sm"
         />
+      </template>
+
+      <template #actions-cell="{ row }">
+        <div class="flex gap-1 justify-end">
+          <UButton
+            icon="i-lucide-pencil"
+            variant="ghost"
+            color="neutral"
+            size="xs"
+            :to="`/attendance/${row.original.id}`"
+          />
+        </div>
       </template>
     </UTable>
   </div>

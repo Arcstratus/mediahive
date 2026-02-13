@@ -29,6 +29,7 @@ const columns: TableColumn<OpportunityItem>[] = [
   { id: 'stage', accessorKey: 'stage', header: '階段' },
   { accessorKey: 'owner', header: '負責人' },
   { accessorKey: 'expected_close', header: '預計成交日' },
+  { id: 'actions', header: '' },
 ]
 
 const stageColorMap: Record<string, string> = {
@@ -44,7 +45,10 @@ const stageColorMap: Record<string, string> = {
   <div class="flex flex-col gap-6">
     <PageBreadcrumb :items="[{ label: '商機管理' }]" />
 
-    <h1 class="text-2xl font-bold">商機管理</h1>
+    <div class="flex items-center justify-between">
+      <h1 class="text-2xl font-bold">商機管理</h1>
+      <UButton label="新增商機" icon="i-lucide-plus" to="/opportunity/new" />
+    </div>
 
     <UTable :data="items" :columns="columns">
       <template #stage-cell="{ row }">
@@ -58,6 +62,12 @@ const stageColorMap: Record<string, string> = {
 
       <template #expected_close-cell="{ row }">
         {{ formatDate(row.original.expected_close) }}
+      </template>
+
+      <template #actions-cell="{ row }">
+        <div class="flex gap-1 justify-end">
+          <UButton icon="i-lucide-pencil" variant="ghost" color="neutral" size="xs" :to="`/opportunity/${row.original.id}`" />
+        </div>
       </template>
     </UTable>
   </div>

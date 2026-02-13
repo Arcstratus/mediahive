@@ -29,6 +29,7 @@ const columns: TableColumn<FinanceItem>[] = [
   { accessorKey: 'amount', header: '金額' },
   { accessorKey: 'remark', header: '備註' },
   { accessorKey: 'date', header: '日期' },
+  { id: 'actions', header: '' },
 ]
 
 const typeColorMap: Record<string, string> = {
@@ -41,7 +42,10 @@ const typeColorMap: Record<string, string> = {
   <div class="flex flex-col gap-6">
     <PageBreadcrumb :items="[{ label: '財務會計' }]" />
 
-    <h1 class="text-2xl font-bold">財務會計</h1>
+    <div class="flex items-center justify-between">
+      <h1 class="text-2xl font-bold">財務會計</h1>
+      <UButton label="新增傳票" icon="i-lucide-plus" to="/finance/new" />
+    </div>
 
     <UTable :data="items" :columns="columns">
       <template #type-cell="{ row }">
@@ -57,6 +61,11 @@ const typeColorMap: Record<string, string> = {
       </template>
       <template #date-cell="{ row }">
         {{ formatDate(row.original.date) }}
+      </template>
+      <template #actions-cell="{ row }">
+        <div class="flex gap-1 justify-end">
+          <UButton icon="i-lucide-pencil" variant="ghost" color="neutral" size="xs" :to="`/finance/${row.original.id}`" />
+        </div>
       </template>
     </UTable>
   </div>

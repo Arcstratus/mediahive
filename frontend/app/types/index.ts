@@ -105,6 +105,59 @@ export interface DemoUser {
 }
 
 // ============================================================================
+// Project Management Types
+// ============================================================================
+
+export type ProjectStatus = '規劃中' | '進行中' | '已暫停' | '已完成' | '已結案' | '已取消'
+export type MilestoneStatus = '未開始' | '進行中' | '已完成' | '已逾期'
+export type RequirementStatus = '草稿' | '已確認' | '開發中' | '已交付' | '已取消'
+export type RequirementPriority = '必要' | '重要' | '一般' | '可選'
+
+export interface DemoProject {
+  id: number
+  code: string
+  name: string
+  description: string
+  customer: string
+  manager: string
+  members: string[]
+  start_date: string
+  end_date: string
+  progress: number
+  status: ProjectStatus
+  budget: number
+  created_at: string
+  updated_at: string
+}
+
+export interface DemoMilestone {
+  id: number
+  projectId: number
+  title: string
+  description: string
+  status: MilestoneStatus
+  start_date: string
+  end_date: string
+  progress: number
+  requirementIds: number[]
+  created_at: string
+}
+
+export interface DemoRequirement {
+  id: number
+  projectId: number
+  requirementNumber: string
+  title: string
+  description: string
+  status: RequirementStatus
+  priority: RequirementPriority
+  source: string
+  acceptanceCriteria: string
+  created_at: string
+  updated_at: string
+}
+
+// ============================================================================
 // API Query Params
 // ============================================================================
 

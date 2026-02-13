@@ -1,31 +1,33 @@
 <script setup lang="ts">
+import type { ProjectStatus } from '~/types'
+
 definePageMeta({ layout: 'dashboard' })
 
 const route = useRoute()
 const toast = useToast()
-
 const id = Number(route.params.id)
 
-// TODO: 後端支援 - 從 API 取得專案資料
-const project = {
-  id,
-  name: 'ERP 系統導入',
-  customer: '台灣科技股份有限公司',
-  manager: '陳大文',
-  start_date: '2025-01-01',
-  end_date: '2025-06-30',
-  description: '為客戶導入完整 ERP 系統，包含庫存、採購、銷售及財務模組。',
+const { findProjectById } = useDemoProjects()
+const project = findProjectById(id)
+if (!project) {
+  throw createError({ statusCode: 404, statusMessage: '找不到該專案' })
 }
 
 const customerOptions = ['台灣科技股份有限公司', '大眾貿易有限公司', '永豐製造股份有限公司', '新創數位有限公司', '綠能環保科技公司']
 const managerOptions = ['陳大文', '林小美', '王志明', '張雅婷', '李國華']
+const memberOptions = ['陳大文', '林小美', '王志明', '張雅婷', '李國華']
+const statusOptions: ProjectStatus[] = ['規劃中', '進行中', '已暫停', '已完成', '已結案', '已取消']
 
 const form = reactive({
+  code: project.code,
   name: project.name,
   customer: project.customer,
   manager: project.manager,
+  members: [...project.members],
   start_date: project.start_date,
   end_date: project.end_date,
+  status: project.status,
+  budget: String(project.budget),
   description: project.description,
 })
 
@@ -54,6 +56,16 @@ async function onSubmit() {
 
     <UCard class="max-w-xl">
       <form class="flex flex-col gap-4" @submit.prevent="onSubmit">
+        <div class="grid grid-cols-2 gap-4">
+          <UFormField label="專案編號" required>
+            <UInput v-model="form.code" placeholder="例：PRJ-006" class="w-full" />
+          </UFormField>
+
+          <UFormField label="狀態">
+            <USelectMenu v-model="form.status" :items="statusOptions" class="w-full" />
+          </UFormField>
+        </div>
+
         <UFormField label="專案名稱" required>
           <UInput v-model="form.name" placeholder="輸入專案名稱" class="w-full" />
         </UFormField>
@@ -62,8 +74,18 @@ async function onSubmit() {
           <USelectMenu v-model="form.customer" :items="customerOptions" placeholder="選擇客戶" class="w-full" />
         </UFormField>
 
-        <UFormField label="專案經理">
-          <USelectMenu v-model="form.manager" :items="managerOptions" placeholder="選擇專案經理" class="w-full" />
+        <div class="grid grid-cols-2 gap-4">
+          <UFormField label="專案經理">
+            <USelectMenu v-model="form.manager" :items="managerOptions" placeholder="選擇專案經理" class="w-full" />
+          </UFormField>
+
+          <UFormField label="預算（NTD）">
+            <UInput v-model="form.budget" type="number" placeholder="輸入預算金額" class="w-full" />
+          </UFormField>
+        </div>
+
+        <UFormField label="團隊成員">
+          <USelectMenu v-model="form.members" :items="memberOptions" multiple placeholder="選擇團隊成員" class="w-full" />
         </UFormField>
 
         <div class="grid grid-cols-2 gap-4">
