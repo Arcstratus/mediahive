@@ -7,7 +7,7 @@ definePageMeta({ layout: 'dashboard' })
 
 const { departments, tree } = useDemoDepartments()
 
-const tab = ref('list')
+const tab = useState('department-view', () => 'list')
 const tabs = [
   { label: '列表', value: 'list', icon: 'i-lucide-list' },
   { label: '樹狀圖', value: 'tree', icon: 'i-lucide-git-branch' },
