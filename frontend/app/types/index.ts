@@ -80,15 +80,37 @@ export interface DemoEmployee {
   created_at: string
 }
 
+export type CustomerLevel = 'VIP' | '一般' | '潛在'
+export type CustomerStatus = 'active' | 'inactive'
+export type CustomerIndustry = '資訊科技' | '國際貿易' | '製造業' | '數位媒體' | '環保科技' | '金融業' | '零售業' | '其他'
+
 export interface DemoCustomer {
   id: number
   name: string
-  contact: string
+  short_name: string
+  tax_id: string
+  industry: CustomerIndustry
+  level: CustomerLevel
+  status: CustomerStatus
+  address: string
+  phone: string
+  fax: string
+  website: string
+  notes: string
+  created_at: string
+  updated_at: string
+}
+
+export interface DemoContact {
+  id: number
+  customerId: number
+  name: string
+  title: string
   email: string
   phone: string
-  industry: string
-  level: 'VIP' | '一般' | '潛在'
-  status: 'active' | 'inactive'
+  mobile: string
+  is_primary: boolean
+  notes: string
   created_at: string
 }
 

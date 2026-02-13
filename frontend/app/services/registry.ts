@@ -157,6 +157,7 @@ export const customerService: ServiceConfig = {
   icon: 'i-lucide-contact',
   path: '/customer',
   sidebar: [
+    { label: '客戶總覽', icon: 'i-lucide-layout-dashboard', to: '/customer/dashboard' },
     { label: '客戶列表', icon: 'i-lucide-list', to: '/customer' },
     { label: '新增客戶', icon: 'i-lucide-plus', to: '/customer/new' },
   ],
