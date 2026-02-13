@@ -68,6 +68,30 @@ export interface DemoAuditLog {
   created_at: string
 }
 
+export interface DemoEmployee {
+  id: number
+  name: string
+  email: string
+  phone: string
+  department: string
+  position: string
+  status: 'active' | 'inactive'
+  hire_date: string
+  created_at: string
+}
+
+export interface DemoCustomer {
+  id: number
+  name: string
+  contact: string
+  email: string
+  phone: string
+  industry: string
+  level: 'VIP' | '一般' | '潛在'
+  status: 'active' | 'inactive'
+  created_at: string
+}
+
 export interface DemoUser {
   uuid: string
   name: string

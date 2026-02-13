@@ -2,15 +2,16 @@
 const route = useRoute()
 
 const modules = [
-  { label: 'Foundation', icon: 'i-lucide-settings', path: '/foundation' },
-  { label: 'ERP', icon: 'i-lucide-package', path: '/erp' },
-  { label: 'HRM', icon: 'i-lucide-users', path: '/hrm' },
-  { label: 'CRM', icon: 'i-lucide-handshake', path: '/crm' },
+  { label: 'Personal', icon: 'i-lucide-library', path: '/personal', prefixes: ['/personal', '/resources', '/bookmarks', '/tags'] },
+  { label: 'Foundation', icon: 'i-lucide-settings', path: '/foundation', prefixes: ['/foundation'] },
+  { label: 'ERP', icon: 'i-lucide-package', path: '/erp', prefixes: ['/erp'] },
+  { label: 'HRM', icon: 'i-lucide-users', path: '/hrm', prefixes: ['/hrm'] },
+  { label: 'CRM', icon: 'i-lucide-handshake', path: '/crm', prefixes: ['/crm'] },
 ]
 
 const currentModule = computed(() => {
   const path = route.path
-  return modules.find(m => path.startsWith(m.path))
+  return modules.find(m => m.prefixes.some(p => path.startsWith(p)))
 })
 
 const currentModuleLabel = computed(() => currentModule.value?.label ?? 'Mediahive')
@@ -25,47 +26,38 @@ const moduleMenuItems = computed(() => [
   })),
 ])
 
-const defaultItems = [
+const personalItems = [
+  { label: '總覽', icon: 'i-lucide-layout-dashboard', to: '/personal' },
   {
-    label: 'Home',
-    icon: 'i-lucide-house',
-    to: '/',
-  },
-  {
-    label: 'Resources',
+    label: '資源管理',
     icon: 'i-lucide-library',
     defaultOpen: true,
     children: [
-      { label: 'List', icon: 'i-lucide-list', to: '/resources' },
-      { label: 'Folders', icon: 'i-lucide-folders', to: '/resources/folders' },
-      { label: 'Trash', icon: 'i-lucide-trash-2', to: '/resources/trash' },
+      { label: '資源列表', icon: 'i-lucide-list', to: '/resources' },
+      { label: '資料夾', icon: 'i-lucide-folders', to: '/resources/folders' },
+      { label: '回收桶', icon: 'i-lucide-trash-2', to: '/resources/trash' },
     ],
   },
   {
-    label: 'Bookmarks',
+    label: '書籤管理',
     icon: 'i-lucide-bookmark',
     defaultOpen: true,
     children: [
-      { label: 'List', icon: 'i-lucide-list', to: '/bookmarks' },
-      { label: 'Folders', icon: 'i-lucide-folders', to: '/bookmarks/folders' },
+      { label: '書籤列表', icon: 'i-lucide-list', to: '/bookmarks' },
+      { label: '資料夾', icon: 'i-lucide-folders', to: '/bookmarks/folders' },
     ],
   },
   {
-    label: 'Tags',
+    label: '標籤管理',
     icon: 'i-lucide-tag',
-    defaultOpen: true,
     children: [
-      { label: 'List', icon: 'i-lucide-list', to: '/tags' },
+      { label: '標籤列表', icon: 'i-lucide-list', to: '/tags' },
     ],
   },
 ]
 
 const foundationItems = [
-  {
-    label: '總覽',
-    icon: 'i-lucide-layout-dashboard',
-    to: '/foundation',
-  },
+  { label: '總覽', icon: 'i-lucide-layout-dashboard', to: '/foundation' },
   {
     label: '使用者管理',
     icon: 'i-lucide-users',
@@ -93,35 +85,69 @@ const foundationItems = [
       { label: '新增角色', icon: 'i-lucide-plus', to: '/foundation/role/new' },
     ],
   },
-  {
-    label: '系統設定',
-    icon: 'i-lucide-settings',
-    to: '/foundation/settings',
-  },
-  {
-    label: '通知中心',
-    icon: 'i-lucide-bell',
-    to: '/foundation/notification',
-  },
-  {
-    label: '稽核日誌',
-    icon: 'i-lucide-scroll-text',
-    to: '/foundation/audit-log',
-  },
-  {
-    label: '個人資料',
-    icon: 'i-lucide-user',
-    to: '/foundation/profile',
-  },
+  { label: '系統設定', icon: 'i-lucide-settings', to: '/foundation/settings' },
+  { label: '通知中心', icon: 'i-lucide-bell', to: '/foundation/notification' },
+  { label: '稽核日誌', icon: 'i-lucide-scroll-text', to: '/foundation/audit-log' },
+  { label: '個人資料', icon: 'i-lucide-user', to: '/foundation/profile' },
 ]
 
-const sidebarItemsMap: Record<string, typeof defaultItems> = {
+const erpItems = [
+  { label: '總覽', icon: 'i-lucide-layout-dashboard', to: '/erp' },
+  { label: '庫存管理', icon: 'i-lucide-warehouse', to: '/erp/inventory' },
+  { label: '採購管理', icon: 'i-lucide-shopping-cart', to: '/erp/purchase' },
+  { label: '銷售管理', icon: 'i-lucide-receipt', to: '/erp/sales' },
+  { label: '財務會計', icon: 'i-lucide-calculator', to: '/erp/finance' },
+  { label: '生產製造', icon: 'i-lucide-factory', to: '/erp/production' },
+  { label: '物流配送', icon: 'i-lucide-truck', to: '/erp/logistics' },
+]
+
+const hrmItems = [
+  { label: '總覽', icon: 'i-lucide-layout-dashboard', to: '/hrm' },
+  {
+    label: '員工管理',
+    icon: 'i-lucide-user',
+    defaultOpen: true,
+    children: [
+      { label: '員工列表', icon: 'i-lucide-list', to: '/hrm/employee' },
+      { label: '新增員工', icon: 'i-lucide-plus', to: '/hrm/employee/new' },
+    ],
+  },
+  { label: '出勤管理', icon: 'i-lucide-clock', to: '/hrm/attendance' },
+  { label: '薪資管理', icon: 'i-lucide-banknote', to: '/hrm/payroll' },
+  { label: '績效考核', icon: 'i-lucide-trophy', to: '/hrm/performance' },
+  { label: '教育訓練', icon: 'i-lucide-graduation-cap', to: '/hrm/training' },
+  { label: '招募管理', icon: 'i-lucide-briefcase', to: '/hrm/recruitment' },
+]
+
+const crmItems = [
+  { label: '總覽', icon: 'i-lucide-layout-dashboard', to: '/crm' },
+  {
+    label: '客戶管理',
+    icon: 'i-lucide-contact',
+    defaultOpen: true,
+    children: [
+      { label: '客戶列表', icon: 'i-lucide-list', to: '/crm/customer' },
+      { label: '新增客戶', icon: 'i-lucide-plus', to: '/crm/customer/new' },
+    ],
+  },
+  { label: '商機管理', icon: 'i-lucide-target', to: '/crm/opportunity' },
+  { label: '合約管理', icon: 'i-lucide-file-signature', to: '/crm/contract' },
+  { label: '行銷活動', icon: 'i-lucide-megaphone', to: '/crm/campaign' },
+  { label: '客服工單', icon: 'i-lucide-headset', to: '/crm/ticket' },
+  { label: '報表分析', icon: 'i-lucide-chart-bar', to: '/crm/report' },
+]
+
+const sidebarItemsMap: Record<string, typeof personalItems> = {
+  personal: personalItems,
   foundation: foundationItems,
+  erp: erpItems,
+  hrm: hrmItems,
+  crm: crmItems,
 }
 
 const sidebarItems = computed(() => {
   const mod = currentModule.value
-  return mod ? (sidebarItemsMap[mod.label.toLowerCase()] ?? defaultItems) : defaultItems
+  return mod ? (sidebarItemsMap[mod.label.toLowerCase()] ?? personalItems) : personalItems
 })
 </script>
 
