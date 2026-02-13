@@ -31,7 +31,7 @@ const expanded = ref(true)
         variant="ghost"
         color="neutral"
         size="xs"
-        :to="`/foundation/department/${node.department.id}`"
+        :to="`/department/${node.department.id}`"
         @click.stop
       />
     </div>

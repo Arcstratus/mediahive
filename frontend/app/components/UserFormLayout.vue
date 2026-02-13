@@ -126,7 +126,7 @@ const departmentOptions = [
             </UFormField>
 
             <div class="flex justify-end gap-2 pt-4">
-              <UButton label="取消" variant="outline" color="neutral" to="/foundation/user" />
+              <UButton label="取消" variant="outline" color="neutral" to="/user" />
               <UButton type="submit" :label="loading ? '儲存中...' : '儲存'" icon="i-lucide-save" :loading="loading" />
             </div>
           </form>
