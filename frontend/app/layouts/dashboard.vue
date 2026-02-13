@@ -62,6 +62,11 @@ const defaultItems = [
 
 const foundationItems = [
   {
+    label: '總覽',
+    icon: 'i-lucide-layout-dashboard',
+    to: '/foundation',
+  },
+  {
     label: '使用者管理',
     icon: 'i-lucide-users',
     defaultOpen: true,
@@ -69,6 +74,39 @@ const foundationItems = [
       { label: '使用者列表', icon: 'i-lucide-list', to: '/foundation/user' },
       { label: '新增使用者', icon: 'i-lucide-plus', to: '/foundation/user/new' },
     ],
+  },
+  {
+    label: '組織架構',
+    icon: 'i-lucide-building',
+    defaultOpen: true,
+    children: [
+      { label: '部門列表', icon: 'i-lucide-list', to: '/foundation/department' },
+      { label: '新增部門', icon: 'i-lucide-plus', to: '/foundation/department/new' },
+    ],
+  },
+  {
+    label: '角色權限',
+    icon: 'i-lucide-shield',
+    defaultOpen: true,
+    children: [
+      { label: '角色列表', icon: 'i-lucide-list', to: '/foundation/role' },
+      { label: '新增角色', icon: 'i-lucide-plus', to: '/foundation/role/new' },
+    ],
+  },
+  {
+    label: '系統設定',
+    icon: 'i-lucide-settings',
+    to: '/foundation/settings',
+  },
+  {
+    label: '通知中心',
+    icon: 'i-lucide-bell',
+    to: '/foundation/notification',
+  },
+  {
+    label: '稽核日誌',
+    icon: 'i-lucide-scroll-text',
+    to: '/foundation/audit-log',
   },
   {
     label: '個人資料',

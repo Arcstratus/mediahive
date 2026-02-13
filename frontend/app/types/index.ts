@@ -40,6 +40,34 @@ export interface TrashItem {
   deleted_at: string | null
 }
 
+export interface DemoDepartment {
+  id: number
+  name: string
+  parentId: number | null
+  head: string
+  memberCount: number
+  created_at: string
+}
+
+export interface DemoRole {
+  id: number
+  name: string
+  description: string
+  userCount: number
+  permissions: string[]
+  created_at: string
+}
+
+export interface DemoAuditLog {
+  id: number
+  user: string
+  action: string
+  target: string
+  detail: string
+  ip: string
+  created_at: string
+}
+
 export interface DemoUser {
   uuid: string
   name: string
